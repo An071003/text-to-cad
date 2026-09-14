@@ -1,6 +1,6 @@
 # CAD CI/CD Sandbox Simulation Report
 
-![PASSED](https://img.shields.io/badge/CI_PIPELINE-PASSED-brightgreen)  `Generated: 2026-09-14T04:34:49Z`  `Duration: 57.07s`
+![PASSED](https://img.shields.io/badge/CI_PIPELINE-PASSED-brightgreen)  `Generated: 2026-09-14T04:46:18Z`  `Duration: 239.26s`
 
 ## Executive Summary
 
@@ -8,6 +8,7 @@
 | :---: | :--- | :---: | :--- |
 | ✅ PASS | **Environment** | True | 4 checks |
 | ✅ PASS | **Syntax Audit** | True | 32 checks |
+| ✅ PASS | **Model Builds** | True | 22 checks |
 | ✅ PASS | **Geometric Validation** | True | 22 checks |
 | ✅ PASS | **Tolerances** | True | 0 checks |
 | ✅ PASS | **Snapshots** | True | 0 checks |
