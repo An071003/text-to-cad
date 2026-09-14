@@ -333,6 +333,8 @@ class SandboxPipeline:
             ("STEP/watch_caliber_assembly.step", "tmp/watch_isometric.png", ["--camera", "45:35"]),
             ("STEP/watch_caliber_assembly.step", "tmp/watch_front_dial.png", ["--camera", "0:-89"]),
             ("STEP/watch_caliber_assembly.step", "tmp/watch_back_sapphire.png", ["--camera", "0:89"]),
+            ("STEP/watch_caliber_assembly.step", "tmp/watch_exploded.png", ["--hide", "bezel_and_crystal", "--hide", "caseband", "--hide", "exhibition_caseback", "--camera", "45:35"]),
+            ("STEP/watch_caliber_assembly.step", "tmp/watch_escapement_focus.png", ["--focus", "escape_wheel_assembly", "--focus", "pallet_fork", "--focus", "pallet_jewels", "--camera", "20:45"]),
             ("STEP/dial.step", "tmp/watch_dial_detail.png", []),
             ("STEP/caseband.step", "tmp/watch_caseband_detail.png", ["--camera", "45:35"]),
             ("STEP/watch_caliber_assembly.step", "tmp/watch_running_t0.png", ["--animation", "running_real_time", "--time", "0.0"]),
