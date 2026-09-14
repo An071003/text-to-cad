@@ -11,6 +11,8 @@ PROJECT_ROOT = Path(__file__).resolve().parents[1]
 STEP_DIR = PROJECT_ROOT / "STEP"
 SRC_DIR = PROJECT_ROOT / "src"
 
+WIN32_FLAGS = {"creationflags": subprocess.CREATE_NO_WINDOW} if sys.platform == "win32" else {}
+
 REQUIRED_STEP_MODELS = [
     "mainplate.step",
     "barrel_bridge.step",
@@ -51,7 +53,7 @@ def test_top_level_assembly_validation():
     assert assembly_file.exists()
 
     cmd = ["cadgen", "step", "inspect", "validate", str(assembly_file.relative_to(PROJECT_ROOT))]
-    res = subprocess.run(cmd, cwd=str(PROJECT_ROOT), capture_output=True, text=True)
+    res = subprocess.run(cmd, cwd=str(PROJECT_ROOT), capture_output=True, text=True, **WIN32_FLAGS)
     assert res.returncode == 0, f"Validation command failed: {res.stderr}"
 
     data = json.loads(res.stdout)
@@ -63,7 +65,7 @@ def test_top_level_assembly_validation():
 def test_caliber_bounding_box_specifications():
     """Verify caliber dimensions adhere to the 16.5 ligne (Ø 36.60 mm) standard."""
     cmd = ["cadgen", "step", "inspect", "refs", "STEP/watch_caliber_assembly.step", "--facts"]
-    res = subprocess.run(cmd, cwd=str(PROJECT_ROOT), capture_output=True, text=True)
+    res = subprocess.run(cmd, cwd=str(PROJECT_ROOT), capture_output=True, text=True, **WIN32_FLAGS)
     assert res.returncode == 0
 
     data = json.loads(res.stdout)

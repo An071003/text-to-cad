@@ -41,6 +41,9 @@ CYAN = "\033[96m"
 BOLD = "\033[1m"
 RESET = "\033[0m"
 
+# Silent subprocess execution on Windows to suppress console/terminal popups
+WIN32_FLAGS = {"creationflags": subprocess.CREATE_NO_WINDOW} if sys.platform == "win32" else {}
+
 
 class SandboxPipeline:
     def __init__(self, verbose: bool = False):
@@ -92,7 +95,7 @@ class SandboxPipeline:
 
         # 3. cadgen CLI Tool
         try:
-            res = subprocess.run(["cadgen", "--version"], capture_output=True, text=True, check=True)
+            res = subprocess.run(["cadgen", "--version"], capture_output=True, text=True, check=True, **WIN32_FLAGS)
             cadgen_ver = res.stdout.strip()
             stage_data["checks"].append({"name": "cadgen CLI", "passed": True, "details": cadgen_ver})
             self.log("cadgen CLI", f"Available ({cadgen_ver})", "PASS")
@@ -178,7 +181,7 @@ class SandboxPipeline:
         for ms in model_scripts:
             rel = ms.relative_to(PROJECT_ROOT)
             t0 = time.time()
-            res = subprocess.run([sys.executable, str(ms)], cwd=str(PROJECT_ROOT), capture_output=True, text=True)
+            res = subprocess.run([sys.executable, str(ms)], cwd=str(PROJECT_ROOT), capture_output=True, text=True, **WIN32_FLAGS)
             elapsed = time.time() - t0
 
             if res.returncode == 0:
@@ -209,7 +212,7 @@ class SandboxPipeline:
         for sf in step_files:
             rel = sf.relative_to(PROJECT_ROOT)
             cmd = ["cadgen", "step", "inspect", "validate", str(rel)]
-            res = subprocess.run(cmd, cwd=str(PROJECT_ROOT), capture_output=True, text=True)
+            res = subprocess.run(cmd, cwd=str(PROJECT_ROOT), capture_output=True, text=True, **WIN32_FLAGS)
 
             is_valid = False
             details = {}
@@ -254,7 +257,7 @@ class SandboxPipeline:
             return False
 
         cmd = ["cadgen", "step", "inspect", "refs", "STEP/watch_caliber_assembly.step", "--facts"]
-        res = subprocess.run(cmd, cwd=str(PROJECT_ROOT), capture_output=True, text=True)
+        res = subprocess.run(cmd, cwd=str(PROJECT_ROOT), capture_output=True, text=True, **WIN32_FLAGS)
 
         try:
             data = json.loads(res.stdout)
@@ -317,7 +320,7 @@ class SandboxPipeline:
                 cmd += ["--camera", cam]
 
             t0 = time.time()
-            res = subprocess.run(cmd, cwd=str(PROJECT_ROOT), capture_output=True, text=True)
+            res = subprocess.run(cmd, cwd=str(PROJECT_ROOT), capture_output=True, text=True, **WIN32_FLAGS)
             elapsed = time.time() - t0
             out_file = PROJECT_ROOT / out
 
