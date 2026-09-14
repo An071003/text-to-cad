@@ -21,6 +21,7 @@ from build123d import (
     BuildPart,
     BuildSketch,
     Circle,
+    Compound,
     Cylinder,
     Location,
     Mode,
@@ -58,14 +59,21 @@ def bezel():
             Circle(radius=r_sapphire)
         extrude(amount=-1.05, mode=Mode.SUBTRACT)
 
-        # 4. Front Sapphire Crystal Disc
+    bezel_ring = bz.part
+    bezel_ring.color = srgb("#E5E9F0")
+    bezel_ring.cad_material = {"roughness": 0.12, "metalness": 0.95}
+
+    # 4. Front Optical Sapphire Crystal Disc as separate translucent body
+    with BuildPart() as cry:
         with BuildSketch(Plane.XY.offset(z_mount - 0.10)):
             Circle(radius=r_sapphire - 0.05)
-        extrude(amount=-0.95, mode=Mode.ADD)
+        extrude(amount=-0.95)
 
-    # Polished steel with subtle crystal tint
-    bz.part.color = srgb("#E5E9F0")
-    return bz.part
+    crystal = cry.part
+    crystal.color = srgb("#D8E8F8")
+    crystal.cad_material = {"opacity": 0.15, "roughness": 0.04, "metalness": 0.05}
+
+    return Compound(children=[bezel_ring, crystal])
 
 
 if __name__ == "__main__":

@@ -27,6 +27,7 @@ from build123d import (
     BuildPart,
     BuildSketch,
     Circle,
+    Compound,
     Cylinder,
     Location,
     Mode,
@@ -78,6 +79,7 @@ def hour_hand():
         hh.part = hh.part + blade
 
     hh.part.color = srgb("#204080")
+    hh.part.cad_material = {"roughness": 0.10, "metalness": 0.92}
     return hh.part
 
 
@@ -97,7 +99,8 @@ def minute_hand():
         blade = blade.moved(Location((0, 0, z_mount), (0, 0, 90.0)))
         mh.part = mh.part + blade
 
-    mh.part.color = srgb("#204080")
+    mh.part.color = srgb("#2A52BE")
+    mh.part.cad_material = {"roughness": 0.14, "metalness": 0.88}
     return mh.part
 
 
@@ -138,6 +141,7 @@ def seconds_hand():
         extrude(amount=-th)
 
     sh.part.color = srgb("#D02020")
+    sh.part.cad_material = {"roughness": 0.22, "metalness": 0.65}
     return sh.part
 
 
@@ -151,7 +155,7 @@ def hands():
     # Seconds hand oriented towards 30 seconds (+180 deg)
     s = seconds_hand()
 
-    return h + m + s
+    return Compound(children=[h, m, s])
 
 
 if __name__ == "__main__":

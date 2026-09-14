@@ -329,17 +329,47 @@ class SandboxPipeline:
         stage_data = {"renders": [], "passed": True}
         self.results["stages"]["snapshots"] = stage_data
 
+        # Dynamically query part labels in the assembly so --hide matches exact occurrence names
+        list_cmd = ["cadgen", "step", "snapshot", "STEP/watch_caliber_assembly.step", "--mode", "list"]
+        list_res = subprocess.run(list_cmd, cwd=str(PROJECT_ROOT), capture_output=True, text=True, **WIN32_FLAGS)
+        available_parts = []
+        if list_res.returncode == 0:
+            for line in list_res.stdout.splitlines():
+                p = line.strip()
+                if p and not p.startswith("[") and not p.startswith("{"):
+                    available_parts.append(p)
+        self.log("Parts", f"Discovered {len(available_parts)} part labels in assembly", "INFO")
+
+        exploded_hide_args = []
+        for p in available_parts:
+            if any(k in p.lower() for k in ["bezel", "caseband", "caseback", "crystal"]):
+                exploded_hide_args.extend(["--hide", p])
+        if not exploded_hide_args:
+            exploded_hide_args = ["--camera", "45:35"]
+        else:
+            exploded_hide_args.extend(["--camera", "45:35"])
+
         snapshot_targets = [
             ("STEP/watch_caliber_assembly.step", "tmp/watch_isometric.png", ["--camera", "45:35"]),
             ("STEP/watch_caliber_assembly.step", "tmp/watch_front_dial.png", ["--camera", "0:-89"]),
             ("STEP/watch_caliber_assembly.step", "tmp/watch_back_sapphire.png", ["--camera", "0:89"]),
-            ("STEP/watch_caliber_assembly.step", "tmp/watch_exploded.png", ["--hide", "bezel_and_crystal", "--hide", "caseband", "--hide", "exhibition_caseback", "--camera", "45:35"]),
+            ("STEP/watch_caliber_assembly.step", "tmp/watch_hands_color.png", ["--camera", "0:-89", "--focus", "hour_hand", "--focus", "minute_hand", "--focus", "seconds_hand"]),
+            ("STEP/watch_caliber_assembly.step", "tmp/watch_exploded.png", exploded_hide_args),
             ("STEP/watch_caliber_assembly.step", "tmp/watch_escapement_focus.png", ["--focus", "escape_wheel_assembly", "--focus", "pallet_fork", "--focus", "pallet_jewels", "--camera", "20:45"]),
             ("STEP/dial.step", "tmp/watch_dial_detail.png", []),
             ("STEP/caseband.step", "tmp/watch_caseband_detail.png", ["--camera", "45:35"]),
+            # Real-time animation frames
             ("STEP/watch_caliber_assembly.step", "tmp/watch_running_t0.png", ["--animation", "running_real_time", "--time", "0.0"]),
             ("STEP/watch_caliber_assembly.step", "tmp/watch_running_t02.png", ["--animation", "running_real_time", "--time", "0.2"]),
             ("STEP/watch_caliber_assembly.step", "tmp/watch_running_t2.png", ["--animation", "running_real_time", "--time", "2.0"]),
+            # 60x presentation speed frames for frame-to-frame motion verification
+            ("STEP/watch_caliber_assembly.step", "tmp/watch_running_x60_t0.png", ["--animation", "running_x60", "--time", "0.0"]),
+            ("STEP/watch_caliber_assembly.step", "tmp/watch_running_x60_t02.png", ["--animation", "running_x60", "--time", "0.2"]),
+            ("STEP/watch_caliber_assembly.step", "tmp/watch_running_x60_t1.png", ["--animation", "running_x60", "--time", "1.0"]),
+            # Inspection / Exploded View snapshots
+            ("STEP/watch_caliber_assembly.step", "tmp/watch_inspection_closed.png", ["--kinematics", "rest", "--camera", "45:35"]),
+            ("STEP/watch_caliber_assembly.step", "tmp/watch_inspection_open.png", ["--kinematics", "inspection_open", "--camera", "45:35"]),
+            ("STEP/watch_caliber_assembly.step", "tmp/watch_inspection_exploded_t4.png", ["--animation", "inspection_exploded", "--time", "4.0", "--camera", "45:35"]),
         ]
 
         all_ok = True
@@ -359,6 +389,28 @@ class SandboxPipeline:
                 all_ok = False
                 stage_data["renders"].append({"target": target, "output": out, "error": res.stderr})
                 self.log("Snapshot", f"{out} failed", "FAIL")
+
+        # Frame-to-frame animation movement verification (pixel/hash difference)
+        f0 = PROJECT_ROOT / "tmp/watch_running_x60_t0.png"
+        f02 = PROJECT_ROOT / "tmp/watch_running_x60_t02.png"
+        f1 = PROJECT_ROOT / "tmp/watch_running_x60_t1.png"
+
+        if f0.exists() and f02.exists() and f1.exists():
+            import hashlib
+            h0 = hashlib.sha256(f0.read_bytes()).hexdigest()
+            h02 = hashlib.sha256(f02.read_bytes()).hexdigest()
+            h1 = hashlib.sha256(f1.read_bytes()).hexdigest()
+
+            diff_0_02 = (h0 != h02)
+            diff_02_1 = (h02 != h1)
+            motion_verified = diff_0_02 and diff_02_1
+
+            stage_data["motion_verified"] = motion_verified
+            if motion_verified:
+                self.log("Animation", "Frame motion VERIFIED: t=0.0 != t=0.2 != t=1.0 (pixels changed)", "PASS")
+            else:
+                self.log("Animation", "Animation frames are identical! Hands did not move.", "FAIL")
+                all_ok = False
 
         stage_data["passed"] = all_ok
         return all_ok

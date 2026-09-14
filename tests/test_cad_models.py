@@ -195,3 +195,100 @@ def test_assembly_interference_free():
     assert data.get("ok") is True, f"Interference check error: {data.get('errors')}"
     clashes = data.get("clashes", [])
     assert len(clashes) == 0, f"Found {len(clashes)} clash(es): {clashes}"
+
+
+def test_hand_color_materials_and_separation():
+    """Verify hour, minute, and seconds hands have distinct colors and materials."""
+    sys.path.insert(0, str(SRC_DIR))
+    from watch_exterior.hands import hour_hand, minute_hand, seconds_hand, hands
+    from build123d import Compound
+
+    h = hour_hand()
+    m = minute_hand()
+    s = seconds_hand()
+
+    # Verify colors are defined and distinct
+    assert h.color is not None, "Hour hand missing color"
+    assert m.color is not None, "Minute hand missing color"
+    assert s.color is not None, "Seconds hand missing color"
+    assert h.color != s.color, "Hour and seconds hand must have different colors"
+    assert m.color != s.color, "Minute and seconds hand must have different colors"
+
+    # Verify cad_material attributes
+    assert hasattr(h, "cad_material") and h.cad_material["metalness"] > 0.8
+    assert hasattr(m, "cad_material") and m.cad_material["metalness"] > 0.8
+    assert hasattr(s, "cad_material") and s.cad_material["roughness"] > 0.15
+
+    # Verify hands compound returns 3 distinct children
+    all_hands = hands()
+    assert isinstance(all_hands, Compound)
+    num_children = len(all_hands.children) if hasattr(all_hands, "children") else len(all_hands.solids())
+    assert num_children == 3, f"Expected 3 children in hands compound, got {num_children}"
+
+
+def test_animation_clips_and_no_error_suppression():
+    """Verify animation JS module defines all 5 required clips and contains NO try/catch suppression."""
+    anim_js = STEP_DIR / "watch_caliber_assembly.step.js"
+    assert anim_js.exists(), "Missing animation JS sidecar file"
+
+    content = anim_js.read_text(encoding="utf-8")
+
+    # Verify all 5 clips exist
+    required_clips = [
+        "running_real_time",
+        "running_x60",
+        "wind_crown",
+        "time_setting",
+        "inspection_exploded",
+    ]
+    for clip in required_clips:
+        assert f"{clip}:" in content, f"Animation clip '{clip}' is missing from JS module"
+
+    # Verify NO try/catch error masking exists
+    assert "try {" not in content and "try{" not in content, "Found 'try' block suppressing errors in animation JS"
+    assert "catch (" not in content and "catch(" not in content, "Found 'catch' block suppressing errors in animation JS"
+
+
+def test_kinematics_inspection_sliders_and_poses():
+    """Verify KINEMATICS configuration includes inspection sliders and inspection_open pose."""
+    sys.path.insert(0, str(SRC_DIR))
+    from assembly import KINEMATICS
+
+    mates = KINEMATICS.get("mates", [])
+    mate_names = {mate.get("name"): mate for mate in mates}
+
+    # 1. Front Cover Open Slider
+    assert "front_cover_open" in mate_names, "Missing 'front_cover_open' kinematic slider"
+    fc = mate_names["front_cover_open"]
+    assert fc.get("type") == "slider"
+    assert fc.get("parent") == "#mainplate"
+    assert fc.get("child") == "#bezel_and_crystal"
+    assert fc.get("direction") == (0.0, 0.0, -1.0)
+    assert fc.get("limits") == (0.0, 8.0)
+
+    # 2. Rear Cover Open Slider
+    assert "rear_cover_open" in mate_names, "Missing 'rear_cover_open' kinematic slider"
+    rc = mate_names["rear_cover_open"]
+    assert rc.get("type") == "slider"
+    assert rc.get("parent") == "#mainplate"
+    assert rc.get("child") == "#exhibition_caseback"
+    assert rc.get("direction") == (0.0, 0.0, 1.0)
+    assert rc.get("limits") == (0.0, 8.0)
+
+    # 3. Caseband Inspection Shift Slider
+    assert "caseband_inspection_shift" in mate_names, "Missing 'caseband_inspection_shift' kinematic slider"
+    cb = mate_names["caseband_inspection_shift"]
+    assert cb.get("type") == "slider"
+    assert cb.get("parent") == "#mainplate"
+    assert cb.get("child") == "#caseband"
+    assert cb.get("direction") == (1.0, 0.0, 0.0)
+    assert cb.get("limits") == (0.0, 10.0)
+
+    # 4. Inspection Open Pose
+    poses = KINEMATICS.get("poses", {})
+    assert "inspection_open" in poses, "Missing 'inspection_open' pose"
+    insp_pose = poses["inspection_open"]
+    assert insp_pose.get("front_cover_open") == 8.0
+    assert insp_pose.get("rear_cover_open") == 8.0
+    assert insp_pose.get("caseband_inspection_shift") == 10.0
+

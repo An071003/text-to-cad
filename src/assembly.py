@@ -163,6 +163,31 @@ KINEMATICS = {
             direction=(1, 0, 0),
             limits={"turn": (-360.0, 360.0), "travel": (0.0, 1.20)},
         ),
+        # 3 Inspection / Exploded View Sliders for Native CAD Viewer Controls
+        cadgen.slider(
+            "front_cover_open",
+            parent="#mainplate",
+            child="#bezel_and_crystal",
+            origin=(0.0, 0.0, -4.80),
+            direction=(0.0, 0.0, -1.0),
+            limits=(0.0, 8.0),
+        ),
+        cadgen.slider(
+            "rear_cover_open",
+            parent="#mainplate",
+            child="#exhibition_caseback",
+            origin=(0.0, 0.0, 3.20),
+            direction=(0.0, 0.0, 1.0),
+            limits=(0.0, 8.0),
+        ),
+        cadgen.slider(
+            "caseband_inspection_shift",
+            parent="#mainplate",
+            child="#caseband",
+            origin=(0.0, 0.0, 0.0),
+            direction=(1.0, 0.0, 0.0),
+            limits=(0.0, 10.0),
+        ),
     ],
     "couplings": [
         cadgen.couple(
@@ -192,6 +217,19 @@ KINEMATICS = {
             "seconds_hand_rot": 0.0,
             "crown_joint.turn": 0.0,
             "crown_joint.travel": 0.0,
+            "front_cover_open": 0.0,
+            "rear_cover_open": 0.0,
+            "caseband_inspection_shift": 0.0,
+        },
+        "inspection_open": {
+            "front_cover_open": 8.0,
+            "rear_cover_open": 8.0,
+            "caseband_inspection_shift": 10.0,
+            "minute_hand_rot": 0.0,
+            "hour_hand_rot": 0.0,
+            "seconds_hand_rot": 0.0,
+            "crown_joint.turn": 0.0,
+            "crown_joint.travel": 0.0,
         },
         "wound": {
             "barrel_rot": 90.0,
@@ -199,6 +237,9 @@ KINEMATICS = {
             "pallet_rot": 4.5,
             "crown_joint.turn": 720.0,
             "crown_joint.travel": 0.0,
+            "front_cover_open": 0.0,
+            "rear_cover_open": 0.0,
+            "caseband_inspection_shift": 0.0,
         },
         "time_setting": {
             "crown_joint.travel": 1.20,
@@ -206,6 +247,9 @@ KINEMATICS = {
             "minute_hand_rot": 360.0,
             "hour_hand_rot": 30.0,
             "seconds_hand_rot": 0.0,
+            "front_cover_open": 0.0,
+            "rear_cover_open": 0.0,
+            "caseband_inspection_shift": 0.0,
         },
         "running_preview": {
             "balance_rot": 180.0,
@@ -217,6 +261,9 @@ KINEMATICS = {
             "hour_hand_rot": 0.0016,
             "crown_joint.travel": 0.0,
             "crown_joint.turn": 0.0,
+            "front_cover_open": 0.0,
+            "rear_cover_open": 0.0,
+            "caseband_inspection_shift": 0.0,
         },
     },
 }

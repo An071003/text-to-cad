@@ -25,6 +25,7 @@ from build123d import (
     BuildPart,
     BuildSketch,
     Circle,
+    Compound,
     Cylinder,
     Location,
     Locations,
@@ -66,12 +67,7 @@ def caseback():
             Circle(radius=r_sapphire)
         extrude(amount=0.90, mode=Mode.SUBTRACT)
 
-        # 4. Exhibition Sapphire Glass Disc
-        with BuildSketch(Plane.XY.offset(z_mount - 0.10)):
-            Circle(radius=r_sapphire - 0.05)
-        extrude(amount=0.85, mode=Mode.ADD)
-
-        # 5. Six Tool Notches (screw-down wrench notches on outer rim)
+        # 4. Six Tool Notches (screw-down wrench notches on outer rim)
         notch_count = 6
         notch_r = 19.40
         for i in range(notch_count):
@@ -82,7 +78,7 @@ def caseback():
             with Locations(Location((nx, ny, z_top - 0.30), (0, 0, deg))):
                 Box(length=1.40, width=2.40, height=0.60, mode=Mode.SUBTRACT)
 
-        # 6. Concentric Inscription Relief Bands
+        # 5. Concentric Inscription Relief Bands
         with BuildSketch(Plane.XY.offset(z_top)):
             Circle(radius=18.60)
             Circle(radius=18.45, mode=Mode.SUBTRACT)
@@ -93,7 +89,7 @@ def caseback():
             Circle(radius=16.75, mode=Mode.SUBTRACT)
         extrude(amount=-0.05, mode=Mode.SUBTRACT)
 
-        # 7. Caseback Alignment & Thread Spigot Lip (Z = +2.90 to Z = +3.20)
+        # 6. Caseback Alignment & Thread Spigot Lip (Z = +2.90 to Z = +3.20)
         # Sits inside the caseband cavity with 0.15 mm clearance fit (r = 18.55 mm < 18.70 mm)
         # Positioned well clear above the highest movement bridge (movement bridges end at Z <= 2.60 mm)
         with BuildSketch(Plane.XY.offset(2.90)):
@@ -101,8 +97,21 @@ def caseback():
             Circle(radius=r_sapphire - 0.20, mode=Mode.SUBTRACT)
         extrude(amount=0.30, mode=Mode.ADD)
 
-    cbk.part.color = srgb("#D8DEE9")
-    return cbk.part
+    caseback_ring = cbk.part
+    caseback_ring.color = srgb("#D8DEE9")
+    caseback_ring.cad_material = {"roughness": 0.15, "metalness": 0.92}
+
+    # 7. Exhibition Sapphire Glass Disc as separate translucent body
+    with BuildPart() as cry:
+        with BuildSketch(Plane.XY.offset(z_mount - 0.10)):
+            Circle(radius=r_sapphire - 0.05)
+        extrude(amount=0.85)
+
+    rear_sapphire = cry.part
+    rear_sapphire.color = srgb("#D8E8F8")
+    rear_sapphire.cad_material = {"opacity": 0.15, "roughness": 0.04, "metalness": 0.05}
+
+    return Compound(children=[caseback_ring, rear_sapphire])
 
 
 if __name__ == "__main__":
