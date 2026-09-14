@@ -1,6 +1,7 @@
 """Automated Pytest Suite for Watch Caliber CAD Models."""
 
 import json
+import os
 import subprocess
 import sys
 from pathlib import Path
@@ -12,6 +13,7 @@ STEP_DIR = PROJECT_ROOT / "STEP"
 SRC_DIR = PROJECT_ROOT / "src"
 
 WIN32_FLAGS = {"creationflags": subprocess.CREATE_NO_WINDOW} if sys.platform == "win32" else {}
+os.environ["CADGEN_DAEMON"] = "0"
 
 REQUIRED_STEP_MODELS = [
     "mainplate.step",

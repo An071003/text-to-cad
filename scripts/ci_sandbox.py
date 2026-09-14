@@ -44,6 +44,9 @@ RESET = "\033[0m"
 # Silent subprocess execution on Windows to suppress console/terminal popups
 WIN32_FLAGS = {"creationflags": subprocess.CREATE_NO_WINDOW} if sys.platform == "win32" else {}
 
+# Disable cadgen daemon to prevent it from spawning background warm workers that open console windows
+os.environ["CADGEN_DAEMON"] = "0"
+
 
 class SandboxPipeline:
     def __init__(self, verbose: bool = False):

@@ -6,6 +6,9 @@ Write-Host "===================================================" -ForegroundColo
 $ScriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
 $ProjectRoot = Split-Path -Parent $ScriptDir
 
+# Disable cadgen background daemon and warm worker pool to prevent console window popups
+$env:CADGEN_DAEMON = "0"
+
 python "$ScriptDir\ci_sandbox.py" --all
 if ($LASTEXITCODE -ne 0) {
     Write-Host "`n[FAIL] CI/CD Sandbox Pipeline Failed!" -ForegroundColor Red
