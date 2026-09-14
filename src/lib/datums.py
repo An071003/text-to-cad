@@ -46,6 +46,12 @@ BALANCE_PIVOT = (-3.3364, 10.9647)
 STEM_Y = -2.50
 STEM_Z = -0.80
 
+# Crown Wheel Pivot (internal winding transmission wheel):
+CROWN_WHEEL_PIVOT = (3.5000, -6.0000)
+
+# Ratchet Click Pivot (pawl pivot):
+RATCHET_CLICK_PIVOT = (-8.5000, -13.0000)
+
 # Bridge Screw & Steady Pin Hole Locations:
 # Barrel Bridge mounting holes
 BARREL_BRIDGE_SCREWS = [

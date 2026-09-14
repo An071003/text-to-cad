@@ -59,6 +59,15 @@ export const clips = {
       // Hour hand: 360 deg / 43200 s = - (0.1 / 12.0) deg/s
       const hourHandAngle = minHandAngle / 12.0;
       rot(m, "hour_hand", [0, 0, 1], hourHandAngle, [0, 0, 0]);
+
+      // 7. Mainspring Barrel Drum: slowly rotates to power gear train (z=77 meshes with z=12 center pinion)
+      const barrelDrumAngle = - centerAngle * (12.0 / 77.0);
+      rot(m, "mainspring_barrel_drum", [0, 0, 1], barrelDrumAngle, [-3.5019, -7.2039, 0]);
+
+      // Ratchet wheel and barrel arbor remain fixed after winding
+      rot(m, "ratchet_wheel", [0, 0, 1], 0.0, [-3.5019, -7.2039, 0]);
+      rot(m, "barrel_arbor", [0, 0, 1], 0.0, [-3.5019, -7.2039, 0]);
+      rot(m, "crown_wheel_internal", [0, 0, 1], 0.0, [3.5000, -6.0000, 0]);
     },
   },
 
@@ -108,6 +117,13 @@ export const clips = {
       // Hour hand: sweeps 6 deg over 12s (0.5 deg/s clockwise, 12:1 ratio)
       const hourHandAngle = minHandAngle / 12.0;
       rot(m, "hour_hand", [0, 0, 1], hourHandAngle, [0, 0, 0]);
+
+      // Mainspring barrel drum rotation at 60x
+      const barrelDrumAngle = - centerAngle * (12.0 / 77.0);
+      rot(m, "mainspring_barrel_drum", [0, 0, 1], barrelDrumAngle, [-3.5019, -7.2039, 0]);
+      rot(m, "ratchet_wheel", [0, 0, 1], 0.0, [-3.5019, -7.2039, 0]);
+      rot(m, "barrel_arbor", [0, 0, 1], 0.0, [-3.5019, -7.2039, 0]);
+      rot(m, "crown_wheel_internal", [0, 0, 1], 0.0, [3.5000, -6.0000, 0]);
     },
   },
 
@@ -116,15 +132,37 @@ export const clips = {
     duration: 4,
     loop: true,
     update(t, m) {
-      // Crown turns clockwise about X-axis
+      // 1. Crown & Stem rotate about X-axis
       const crownDeg = t * 360.0;
       rot(m, "winding_crown", [1, 0, 0], crownDeg, [21.60, -2.50, -0.80]);
-      rot(m, "keyless_winding_mechanism", [1, 0, 0], crownDeg, [18.30, -2.50, -0.80]);
+      rot(m, "winding_stem", [1, 0, 0], crownDeg, [18.30, -2.50, -0.80]);
+      rot(m, "winding_pinion", [1, 0, 0], crownDeg, [11.20, -2.50, -0.80]);
+      rot(m, "sliding_pinion", [1, 0, 0], crownDeg, [13.20, -2.50, -0.80]);
 
-      // Ratchet wheel advances through crown wheel gearing (30:42)
-      const ratchetDeg = crownDeg * (30.0 / 42.0);
-      rot(m, "ratchet_and_crown_work", [0, 0, 1], -ratchetDeg, [-3.5019, -7.2039, 0]);
-      rot(m, "mainspring_barrel", [0, 0, 1], -ratchetDeg * 0.08, [-3.5019, -7.2039, 0]);
+      // 2. Crown wheel internal rotates about its own real pivot [3.50, -6.00, 0]
+      // Winding pinion (z=14) drives crown wheel (z=30)
+      const crownWheelDeg = - crownDeg * (14.0 / 30.0);
+      rot(m, "crown_wheel_internal", [0, 0, 1], crownWheelDeg, [3.5000, -6.0000, 0]);
+
+      // 3. Ratchet wheel rotates about BARREL_PIVOT driven by crown wheel
+      // Crown wheel (z=30) drives ratchet wheel (z=42)
+      const ratchetDeg = - crownWheelDeg * (30.0 / 42.0);
+      rot(m, "ratchet_wheel", [0, 0, 1], ratchetDeg, [-3.5019, -7.2039, 0]);
+
+      // 4. Barrel arbor rotates with ratchet wheel on square seat (winding the mainspring)
+      rot(m, "barrel_arbor", [0, 0, 1], ratchetDeg, [-3.5019, -7.2039, 0]);
+
+      // Mainspring barrel drum remains stationary during winding
+      rot(m, "mainspring_barrel_drum", [0, 0, 1], 0.0, [-3.5019, -7.2039, 0]);
+
+      // 5. Ratchet click oscillates 3-8 deg as each ratchet tooth passes
+      const toothPitch = 360.0 / 42.0;
+      const toothProgress = ((ratchetDeg % toothPitch) + toothPitch) % toothPitch / toothPitch;
+      const clickAngle = 3.0 + 5.0 * Math.sin(toothProgress * Math.PI);
+      rot(m, "ratchet_click", [0, 0, 1], clickAngle, [-8.5000, -13.0000, 0]);
+
+      // 6. Click spring remains fixed
+      rot(m, "click_spring", [0, 0, 1], 0.0, [-9.7000, -13.5000, 0]);
     },
   },
 
@@ -133,15 +171,25 @@ export const clips = {
     duration: 6,
     loop: true,
     update(t, m) {
-      // 1. Crown pulls out along +X by 1.20 mm in the first 0.6 seconds
+      // 1. Crown & Stem pull out along +X by 1.20 mm in the first 0.6 seconds
       const pullProgress = Math.min(1.0, t / 0.6);
       const crownX = pullProgress * 1.20;
       trans(m, "winding_crown", [crownX, 0, 0]);
+      trans(m, "winding_stem", [crownX, 0, 0]);
+      trans(m, "sliding_pinion", [crownX * 0.8, 0, 0]);
 
-      // 2. Once pulled, crown rotates to adjust time
+      // 2. Once pulled, crown & stem rotate to adjust time
       const activeT = Math.max(0.0, t - 0.6);
       const crownTurn = activeT * 360.0 * 1.5;
       rot(m, "winding_crown", [1, 0, 0], crownTurn, [21.60 + crownX, -2.50, -0.80]);
+      rot(m, "winding_stem", [1, 0, 0], crownTurn, [18.30 + crownX, -2.50, -0.80]);
+      rot(m, "sliding_pinion", [1, 0, 0], crownTurn, [13.20 + crownX * 0.8, -2.50, -0.80]);
+
+      // Crown wheel internal does NOT rotate when crown is pulled in time setting mode
+      rot(m, "crown_wheel_internal", [0, 0, 1], 0.0, [3.5000, -6.0000, 0]);
+      rot(m, "ratchet_wheel", [0, 0, 1], 0.0, [-3.5019, -7.2039, 0]);
+      rot(m, "barrel_arbor", [0, 0, 1], 0.0, [-3.5019, -7.2039, 0]);
+      rot(m, "mainspring_barrel_drum", [0, 0, 1], 0.0, [-3.5019, -7.2039, 0]);
 
       // 3. Minute hand rotates rapidly (1.5 full turns per second)
       const minHandDeg = - activeT * 360.0 * 1.5;
@@ -163,15 +211,15 @@ export const clips = {
     update(t, m) {
       // 0 - 1.5s: Bezel & Front Sapphire shift negative Z (towards dial side by 8 mm)
       const p1 = Math.min(1.0, t / 1.5);
-      trans(m, "#o1.27", [0, 0, -8.0 * p1]);
+      trans(m, "bezel_and_crystal", [0, 0, -8.0 * p1]);
 
       // 1.5 - 3.0s: Exhibition Caseback shifts positive Z (towards bridge side by 8 mm)
       const p2 = Math.min(1.0, Math.max(0.0, (t - 1.5) / 1.5));
-      trans(m, "#o1.29", [0, 0, 8.0 * p2]);
+      trans(m, "exhibition_caseback", [0, 0, 8.0 * p2]);
 
       // 3.0 - 4.0s: Caseband shifts positive X (by 10 mm) to completely reveal movement caliber
       const p3 = Math.min(1.0, Math.max(0.0, (t - 3.0) / 1.0));
-      trans(m, "#o1.26", [10.0 * p3, 0, 0]);
+      trans(m, "caseband", [10.0 * p3, 0, 0]);
 
       // 4.0 - 5.0s: Holds open inspection state; all internal caliber parts stay firmly at datum
     },

@@ -94,7 +94,7 @@ def caseback():
         # Positioned well clear above the highest movement bridge (movement bridges end at Z <= 2.60 mm)
         with BuildSketch(Plane.XY.offset(2.90)):
             Circle(radius=18.55)
-            Circle(radius=r_sapphire - 0.20, mode=Mode.SUBTRACT)
+            Circle(radius=r_sapphire + 0.10, mode=Mode.SUBTRACT)
         extrude(amount=0.30, mode=Mode.ADD)
 
     caseback_ring = cbk.part

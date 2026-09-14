@@ -370,6 +370,10 @@ class SandboxPipeline:
             ("STEP/watch_caliber_assembly.step", "tmp/watch_inspection_closed.png", ["--kinematics", "rest", "--camera", "45:35"]),
             ("STEP/watch_caliber_assembly.step", "tmp/watch_inspection_open.png", ["--kinematics", "inspection_open", "--camera", "45:35"]),
             ("STEP/watch_caliber_assembly.step", "tmp/watch_inspection_exploded_t4.png", ["--animation", "inspection_exploded", "--time", "4.0", "--camera", "45:35"]),
+            # Winding Crown & Ratchet animation snapshots (Phần E)
+            ("STEP/watch_caliber_assembly.step", "tmp/watch_wind_crown_t0.png", ["--animation", "wind_crown", "--time", "0.0"]),
+            ("STEP/watch_caliber_assembly.step", "tmp/watch_wind_crown_t1.png", ["--animation", "wind_crown", "--time", "1.0"]),
+            ("STEP/watch_caliber_assembly.step", "tmp/watch_wind_crown_t3.png", ["--animation", "wind_crown", "--time", "3.0"]),
         ]
 
         all_ok = True
@@ -410,6 +414,25 @@ class SandboxPipeline:
                 self.log("Animation", "Frame motion VERIFIED: t=0.0 != t=0.2 != t=1.0 (pixels changed)", "PASS")
             else:
                 self.log("Animation", "Animation frames are identical! Hands did not move.", "FAIL")
+                all_ok = False
+
+        # Winding mechanism frame difference check (Phần E)
+        wc0 = PROJECT_ROOT / "tmp/watch_wind_crown_t0.png"
+        wc1 = PROJECT_ROOT / "tmp/watch_wind_crown_t1.png"
+        wc3 = PROJECT_ROOT / "tmp/watch_wind_crown_t3.png"
+
+        if wc0.exists() and wc1.exists() and wc3.exists():
+            import hashlib
+            hw0 = hashlib.sha256(wc0.read_bytes()).hexdigest()
+            hw1 = hashlib.sha256(wc1.read_bytes()).hexdigest()
+            hw3 = hashlib.sha256(wc3.read_bytes()).hexdigest()
+
+            wc_diff = (hw0 != hw1) and (hw1 != hw3) and (hw0 != hw3)
+            stage_data["wind_crown_motion_verified"] = wc_diff
+            if wc_diff:
+                self.log("Animation", "Winding mechanism motion VERIFIED: t=0.0 != t=1.0 != t=3.0 (distinct frames)", "PASS")
+            else:
+                self.log("Animation", "Winding mechanism frames are identical! Parts did not rotate.", "FAIL")
                 all_ok = False
 
         stage_data["passed"] = all_ok

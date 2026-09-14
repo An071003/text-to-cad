@@ -9,7 +9,7 @@ Integrates all 8 subsystems into a fully functional, validated kinematic 3D CAD 
 2. Gear Train (Center, Third, Fourth Wheel & Pinion Assemblies)
 3. Escapement (Escape Wheel, Pallet Fork, Pallet Jewels)
 4. Balance Assembly (Balance Wheel, Hairspring, Double Roller Table)
-5. Power & Winding (Mainspring Barrel, Ratchet & Crown Wheels, Keyless Winding Mechanism, Motion Work)
+5. Power & Winding (Mainspring Barrel Drum, Barrel Arbor, Ratchet Wheel, Crown Wheel Internal, Click, Click Spring, Winding Stem, Winding Pinion, Sliding Pinion, Setting Work, Motion Work)
 6. Fasteners & Jewels (Bridge Screws, Synthetic Ruby Jewels, Steady Pins)
 7. Dial & Hands (Sector Dial, Leaf Hour & Minute Hands, Small Seconds Needle at 9 o'clock)
 8. Watch Exterior (Caseband with 4 Lugs, Bezel & Front Sapphire, Knurled Crown, Exhibition Caseback & Spacer)
@@ -18,7 +18,8 @@ Kinematics:
 - Verified physical gear ratios: 1 : -8 : +60 : -600 (Center -> Third -> Fourth -> Escape)
 - Revolute joints defined at exact horological pivot coordinates
 - Coaxial hand drives: 1:1 minute hand, 1/12 hour hand, 60:1 small-seconds hand
-- Named poses: rest, wound, time_setting, running_preview
+- Winding and ratchet work kinematics with dedicated DOFs
+- Named poses: rest, winding, wound, time_setting, running_preview
 """
 
 import sys
@@ -29,7 +30,7 @@ if str(SRC_DIR) not in sys.path:
     sys.path.insert(0, str(SRC_DIR))
 
 import cadgen
-from build123d import Location
+from cadgen.build123d import Location
 from cadgen import glb, step
 from cadgen.assembly import AssemblyHelper
 
@@ -49,9 +50,11 @@ from lib.datums import (
     BALANCE_PIVOT,
     BARREL_PIVOT,
     CENTER_PIVOT,
+    CROWN_WHEEL_PIVOT,
     ESCAPE_PIVOT,
     FOURTH_PIVOT,
     PALLET_PIVOT,
+    RATCHET_CLICK_PIVOT,
     STEM_Y,
     STEM_Z,
     THIRD_PIVOT,
@@ -67,10 +70,20 @@ from watch_exterior.caseband import caseband
 from watch_exterior.crown import crown
 from watch_exterior.dial import dial
 from watch_exterior.hands import hour_hand, minute_hand, seconds_hand
-from winding_and_barrel.mainspring_barrel import mainspring_barrel
+from winding_and_barrel.mainspring_barrel import barrel_arbor, mainspring_barrel_drum
 from winding_and_barrel.motion_work import motion_work
-from winding_and_barrel.ratchet_and_crown import ratchet_and_crown
-from winding_and_barrel.winding_mechanism import winding_mechanism
+from winding_and_barrel.ratchet_and_crown import (
+    click_spring,
+    crown_wheel_internal,
+    ratchet_click,
+    ratchet_wheel,
+)
+from winding_and_barrel.winding_mechanism import (
+    keyless_setting_work,
+    sliding_pinion,
+    winding_pinion,
+    winding_stem,
+)
 
 # Kinematic articulation & gear coupling definitions
 KINEMATICS = {
@@ -78,10 +91,42 @@ KINEMATICS = {
         cadgen.revolute(
             "barrel_rot",
             parent="#mainplate",
-            child="#mainspring_barrel",
+            child="#mainspring_barrel_drum",
             origin=(BARREL_PIVOT[0], BARREL_PIVOT[1], 0.0),
             direction=(0, 0, 1),
             limits=(-360.0, 360.0),
+        ),
+        cadgen.revolute(
+            "barrel_arbor_rot",
+            parent="#mainplate",
+            child="#barrel_arbor",
+            origin=(BARREL_PIVOT[0], BARREL_PIVOT[1], 0.0),
+            direction=(0, 0, 1),
+            limits=(-360.0, 360.0),
+        ),
+        cadgen.revolute(
+            "ratchet_wheel_rot",
+            parent="#mainplate",
+            child="#ratchet_wheel",
+            origin=(BARREL_PIVOT[0], BARREL_PIVOT[1], 0.0),
+            direction=(0, 0, 1),
+            limits=(-360.0, 360.0),
+        ),
+        cadgen.revolute(
+            "crown_wheel_rot",
+            parent="#mainplate",
+            child="#crown_wheel_internal",
+            origin=(CROWN_WHEEL_PIVOT[0], CROWN_WHEEL_PIVOT[1], 0.0),
+            direction=(0, 0, 1),
+            limits=(-360.0, 360.0),
+        ),
+        cadgen.revolute(
+            "ratchet_click_rot",
+            parent="#mainplate",
+            child="#ratchet_click",
+            origin=(RATCHET_CLICK_PIVOT[0], RATCHET_CLICK_PIVOT[1], 0.0),
+            direction=(0, 0, 1),
+            limits=(0.0, 8.0),
         ),
         cadgen.revolute(
             "center_wheel_rot",
@@ -163,6 +208,27 @@ KINEMATICS = {
             direction=(1, 0, 0),
             limits={"turn": (-360.0, 360.0), "travel": (0.0, 1.20)},
         ),
+        cadgen.fastened(
+            "stem_to_crown",
+            parent="#winding_crown",
+            child="#winding_stem",
+        ),
+        cadgen.revolute(
+            "winding_pinion_rot",
+            parent="#mainplate",
+            child="#winding_pinion",
+            origin=(11.20, STEM_Y, STEM_Z),
+            direction=(1, 0, 0),
+            limits=(-360.0, 360.0),
+        ),
+        cadgen.cylindrical(
+            "sliding_pinion_joint",
+            parent="#mainplate",
+            child="#sliding_pinion",
+            origin=(13.20, STEM_Y, STEM_Z),
+            direction=(1, 0, 0),
+            limits={"turn": (-360.0, 360.0), "travel": (0.0, 1.20)},
+        ),
         # 3 Inspection / Exploded View Sliders for Native CAD Viewer Controls
         cadgen.slider(
             "front_cover_open",
@@ -193,6 +259,7 @@ KINEMATICS = {
         cadgen.couple(
             "gear_train",
             {
+                "barrel_rot": 12.0 / 77.0,
                 "center_wheel_rot": 1.0,
                 "third_wheel_rot": -8.0,
                 "fourth_wheel_rot": 60.0,
@@ -206,6 +273,11 @@ KINEMATICS = {
     ],
     "poses": {
         "rest": {
+            "barrel_rot": 0.0,
+            "barrel_arbor_rot": 0.0,
+            "ratchet_wheel_rot": 0.0,
+            "crown_wheel_rot": 0.0,
+            "ratchet_click_rot": 0.0,
             "center_wheel_rot": 0.0,
             "third_wheel_rot": 0.0,
             "fourth_wheel_rot": 0.0,
@@ -231,8 +303,24 @@ KINEMATICS = {
             "crown_joint.turn": 0.0,
             "crown_joint.travel": 0.0,
         },
+        "winding": {
+            "crown_joint.travel": 0.0,
+            "crown_joint.turn": 360.0,
+            "crown_wheel_rot": -168.0,
+            "ratchet_wheel_rot": 120.0,
+            "barrel_arbor_rot": 120.0,
+            "ratchet_click_rot": 5.0,
+            "barrel_rot": 0.0,
+            "front_cover_open": 0.0,
+            "rear_cover_open": 0.0,
+            "caseband_inspection_shift": 0.0,
+        },
         "wound": {
             "barrel_rot": 90.0,
+            "barrel_arbor_rot": 240.0,
+            "ratchet_wheel_rot": 240.0,
+            "crown_wheel_rot": -336.0,
+            "ratchet_click_rot": 0.0,
             "balance_rot": 200.0,
             "pallet_rot": 4.5,
             "crown_joint.turn": 720.0,
@@ -244,6 +332,10 @@ KINEMATICS = {
         "time_setting": {
             "crown_joint.travel": 1.20,
             "crown_joint.turn": 180.0,
+            "crown_wheel_rot": 0.0,
+            "ratchet_wheel_rot": 0.0,
+            "barrel_arbor_rot": 0.0,
+            "barrel_rot": 0.0,
             "minute_hand_rot": 360.0,
             "hour_hand_rot": 30.0,
             "seconds_hand_rot": 0.0,
@@ -252,6 +344,10 @@ KINEMATICS = {
             "caseband_inspection_shift": 0.0,
         },
         "running_preview": {
+            "barrel_rot": 0.004,
+            "ratchet_wheel_rot": 0.0,
+            "barrel_arbor_rot": 0.0,
+            "crown_wheel_rot": 0.0,
             "balance_rot": 180.0,
             "pallet_rot": -4.5,
             "escape_wheel_rot": 12.0,
@@ -316,15 +412,31 @@ def watch_caliber_assembly():
     asm.add(p_hairspring, "hairspring_spiral")
     asm.add(p_roller, "double_roller_table")
 
-    # 6. Power & Winding Mechanism
-    p_barrel = mainspring_barrel().moved(Location((BARREL_PIVOT[0], BARREL_PIVOT[1], 0)))
-    p_ratchet_crown = ratchet_and_crown()
-    p_winding = winding_mechanism()
+    # 6. Power & Winding Mechanism (Individual Horological Occurrences)
+    p_barrel_drum = mainspring_barrel_drum().moved(Location((BARREL_PIVOT[0], BARREL_PIVOT[1], 0)))
+    p_barrel_arbor = barrel_arbor().moved(Location((BARREL_PIVOT[0], BARREL_PIVOT[1], 0)))
+    p_ratchet_wheel = ratchet_wheel()
+    p_crown_wheel = crown_wheel_internal()
+    p_click = ratchet_click()
+    p_click_spring = click_spring()
+
+    p_stem = winding_stem()
+    p_w_pinion = winding_pinion()
+    p_sliding_pinion = sliding_pinion()
+    p_setting_work = keyless_setting_work()
     p_motion = motion_work()
 
-    asm.add(p_barrel, "mainspring_barrel")
-    asm.add(p_ratchet_crown, "ratchet_and_crown_work")
-    asm.add(p_winding, "keyless_winding_mechanism")
+    asm.add(p_barrel_drum, "mainspring_barrel_drum")
+    asm.add(p_barrel_arbor, "barrel_arbor")
+    asm.add(p_ratchet_wheel, "ratchet_wheel")
+    asm.add(p_crown_wheel, "crown_wheel_internal")
+    asm.add(p_click, "ratchet_click")
+    asm.add(p_click_spring, "click_spring")
+
+    asm.add(p_stem, "winding_stem")
+    asm.add(p_w_pinion, "winding_pinion")
+    asm.add(p_sliding_pinion, "sliding_pinion")
+    asm.add(p_setting_work, "keyless_setting_work")
     asm.add(p_motion, "motion_work_train")
 
     # 7. Fasteners, Jewels & Pins
