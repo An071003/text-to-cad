@@ -28,6 +28,7 @@ from build123d import (
     Circle,
     Cylinder,
     Location,
+    Locations,
     Mode,
     Plane,
     PolarLocations,
@@ -51,12 +52,8 @@ def crown():
 
     with BuildPart() as cr:
         # 1. Main Crown Body Cylinder along X-axis
-        # Centered at (x_base + crown_len / 2.0, stem_y, stem_z)
-        Cylinder(
-            radius=r_crown,
-            height=crown_len,
-            mode=Mode.ADD,
-        ).moved(Location((x_base + crown_len / 2.0, stem_y, stem_z), (0, 90, 0)))
+        with Locations(Location((x_base + crown_len / 2.0, stem_y, stem_z), (0, 90, 0))):
+            Cylinder(radius=r_crown, height=crown_len, mode=Mode.ADD)
 
         # 2. Knurled Grip: 24 longitudinal flute grooves around the perimeter
         flute_count = 24
@@ -66,40 +63,26 @@ def crown():
             rad = math.radians(deg)
             fy = stem_y + r_crown * math.cos(rad)
             fz = stem_z + r_crown * math.sin(rad)
-            Cylinder(
-                radius=flute_r,
-                height=crown_len * 0.85,
-                mode=Mode.SUBTRACT,
-            ).moved(Location((x_base + crown_len * 0.45, fy, fz), (0, 90, 0)))
+            with Locations(Location((x_base + crown_len * 0.45, fy, fz), (0, 90, 0))):
+                Cylinder(radius=flute_r, height=crown_len * 0.85, mode=Mode.SUBTRACT)
 
-        # 3. Outer Domed Cap Profile (chamfer outer rim)
+        # 3. Outer Domed Cap Profile
         x_cap = x_base + crown_len
-        Cylinder(
-            radius=r_crown - 0.40,
-            height=0.40,
-            mode=Mode.ADD,
-        ).moved(Location((x_cap + 0.20, stem_y, stem_z), (0, 90, 0)))
+        with Locations(Location((x_cap + 0.20, stem_y, stem_z), (0, 90, 0))):
+            Cylinder(radius=r_crown - 0.40, height=0.40, mode=Mode.ADD)
 
-        # 4. Internal stem interface bore (Ø 1.20 mm along X)
-        Cylinder(
-            radius=0.60,
-            height=crown_len + 1.0,
-            mode=Mode.SUBTRACT,
-        ).moved(Location((x_base + crown_len / 2.0, stem_y, stem_z), (0, 90, 0)))
-
-        # 5. Inner stem sleeve & gasket collar (facing caseband, X < x_base)
-        Cylinder(
-            radius=1.20,
-            height=1.80,
-            mode=Mode.ADD,
-        ).moved(Location((x_base - 0.90, stem_y, stem_z), (0, 90, 0)))
+        # 4. Inner stem sleeve & gasket collar (facing caseband, X < x_base)
+        with Locations(Location((x_base - 0.90, stem_y, stem_z), (0, 90, 0))):
+            Cylinder(radius=1.20, height=1.80, mode=Mode.ADD)
 
         # Sealing rubber O-ring / gasket
-        gasket = Cylinder(
-            radius=1.28,
-            height=0.50,
-            mode=Mode.ADD,
-        ).moved(Location((x_base - 0.60, stem_y, stem_z), (0, 90, 0)))
+        with Locations(Location((x_base - 0.60, stem_y, stem_z), (0, 90, 0))):
+            Cylinder(radius=1.28, height=0.50, mode=Mode.ADD)
+
+        # 5. Continuous internal stem bore clearing the winding stem (stem r=0.45 mm)
+        # Bores through both sleeve and crown body from X = 19.50 to X = 25.50
+        with Locations(Location((x_base + 0.50, stem_y, stem_z), (0, 90, 0))):
+            Cylinder(radius=0.55, height=7.50, mode=Mode.SUBTRACT)
 
     cr.part.color = srgb("#D8DEE9")
     return cr.part

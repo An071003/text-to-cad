@@ -57,6 +57,12 @@ def barrel_bridge():
             Polygon(contour_pts)
         extrude(amount=bridge_thickness)
 
+        # Trim outer perimeter to strictly conform to caliber circular boundary (radius 18.30 mm)
+        with BuildSketch(Plane.XY):
+            Circle(radius=outer_r + 6.0)
+            Circle(radius=outer_r, mode=Mode.SUBTRACT)
+        extrude(amount=bridge_thickness + 0.10, mode=Mode.SUBTRACT)
+
         # Underside barrel clearance pocket (depth 0.90 mm from Z=0)
         with BuildSketch(Plane.XY):
             with Locations([BARREL_PIVOT]):

@@ -28,6 +28,7 @@ from build123d import (
     Circle,
     Cylinder,
     Location,
+    Locations,
     Mode,
     Plane,
     PolarLocations,
@@ -55,29 +56,25 @@ def dial():
         extrude(amount=z_front - z_back)  # amount = -0.40 mm
 
         # 2. Center arbor clearance hole (Ø 1.80 mm)
-        Cylinder(radius=0.90, height=1.00, mode=Mode.SUBTRACT).moved(Location((0, 0, (z_back + z_front) / 2.0)))
+        with Locations(Location((0, 0, (z_back + z_front) / 2.0))):
+            Cylinder(radius=0.90, height=1.00, mode=Mode.SUBTRACT)
 
         # 3. Small-seconds arbor clearance hole (Ø 0.70 mm at fourth pivot)
-        Cylinder(radius=0.35, height=1.00, mode=Mode.SUBTRACT).moved(
-            Location((sec_pos[0], sec_pos[1], (z_back + z_front) / 2.0))
-        )
+        with Locations(Location((sec_pos[0], sec_pos[1], (z_back + z_front) / 2.0))):
+            Cylinder(radius=0.35, height=1.00, mode=Mode.SUBTRACT)
 
         # 4. Sunken Small-Seconds Subdial at (-9.0000, 0.0000)
-        # Recessed step of 0.10 mm into front face (Z = -4.05 to Z = -3.95)
-        with BuildSketch(Plane.XY.offset(z_front)):
-            Circle(radius=4.60)
-        Cylinder(radius=4.60, height=0.10, mode=Mode.SUBTRACT).moved(
-            Location((sec_pos[0], sec_pos[1], z_front + 0.05))
-        )
+        with Locations(Location((sec_pos[0], sec_pos[1], z_front + 0.05))):
+            Cylinder(radius=4.60, height=0.10, mode=Mode.SUBTRACT)
 
         # Subdial concentric ring track
         with BuildSketch(Plane.XY.offset(z_front + 0.10)):
-            Circle(radius=4.30)
-            Circle(radius=4.15, mode=Mode.SUBTRACT)
+            with Locations([sec_pos]):
+                Circle(radius=4.30)
+                Circle(radius=4.15, mode=Mode.SUBTRACT)
         extrude(amount=-0.04, mode=Mode.SUBTRACT)
 
         # 5. Outer Railroad Sector Minute Track
-        # Concentric rings on outer perimeter
         with BuildSketch(Plane.XY.offset(z_front)):
             Circle(radius=16.50)
             Circle(radius=16.30, mode=Mode.SUBTRACT)
@@ -107,40 +104,27 @@ def dial():
             if hour == 12:
                 # Double baton at 12 o'clock for classic high-horology identity
                 for offset_x in [-0.55, 0.55]:
-                    Box(
-                        length=baton_w,
-                        width=baton_len,
-                        height=baton_h,
-                        mode=Mode.ADD,
-                    ).moved(Location((x + offset_x, y, z_front - baton_h / 2.0)))
+                    with Locations(Location((x + offset_x, y, z_front - baton_h / 2.0))):
+                        Box(length=baton_w, width=baton_len, height=baton_h, mode=Mode.ADD)
             else:
-                Box(
-                    length=baton_w,
-                    width=baton_len,
-                    height=baton_h,
-                    mode=Mode.ADD,
-                ).moved(Location((x, y, z_front - baton_h / 2.0), (0, 0, angle_deg - 90.0)))
+                with Locations(Location((x, y, z_front - baton_h / 2.0), (0, 0, angle_deg - 90.0))):
+                    Box(length=baton_w, width=baton_len, height=baton_h, mode=Mode.ADD)
 
         # 7. Subtle typographic brand plaques / markings
-        # "MECHANICAL" bar below 12 o'clock (Y = +8.00)
-        Box(length=4.20, width=0.40, height=0.04, mode=Mode.ADD).moved(
-            Location((0, 8.20, z_front - 0.02))
-        )
+        # "MECHANICAL" bar below 12 o'clock (Y = +8.20)
+        with Locations(Location((0, 8.20, z_front - 0.02))):
+            Box(length=4.20, width=0.40, height=0.04, mode=Mode.ADD)
+
         # "18,000 VPH" bar above 6 o'clock (Y = -8.50)
-        Box(length=3.60, width=0.35, height=0.04, mode=Mode.ADD).moved(
-            Location((0, -8.50, z_front - 0.02))
-        )
+        with Locations(Location((0, -8.50, z_front - 0.02))):
+            Box(length=3.60, width=0.35, height=0.04, mode=Mode.ADD)
 
         # 8. Dial Feet on reverse face (locating pins for mainplate)
-        # Foot 1 at (12.0, 8.0), Foot 2 at (-12.0, -8.0)
-        Cylinder(radius=0.40, height=0.90, mode=Mode.ADD).moved(
-            Location((12.00, 8.00, z_back + 0.45))
-        )
-        Cylinder(radius=0.40, height=0.90, mode=Mode.ADD).moved(
-            Location((-12.00, -8.00, z_back + 0.45))
-        )
+        with Locations(Location((12.00, 8.00, z_back + 0.45))):
+            Cylinder(radius=0.40, height=0.90, mode=Mode.ADD)
+        with Locations(Location((-12.00, -8.00, z_back + 0.45))):
+            Cylinder(radius=0.40, height=0.90, mode=Mode.ADD)
 
-    # Dial presentation: warm satin ivory with crisp polished markers
     d.part.color = srgb("#F0EFEA")
     return d.part
 

@@ -27,6 +27,7 @@ from build123d import (
     Circle,
     Cylinder,
     Location,
+    Locations,
     Mode,
     Plane,
     PolarLocations,
@@ -78,12 +79,10 @@ def caseback():
             rad = math.radians(deg)
             nx = notch_r * math.cos(rad)
             ny = notch_r * math.sin(rad)
-            Box(length=1.40, width=2.40, height=0.60, mode=Mode.SUBTRACT).moved(
-                Location((nx, ny, z_top - 0.30), (0, 0, deg))
-            )
+            with Locations(Location((nx, ny, z_top - 0.30), (0, 0, deg))):
+                Box(length=1.40, width=2.40, height=0.60, mode=Mode.SUBTRACT)
 
         # 6. Concentric Inscription Relief Bands
-        # "MECHANICAL WATCH · 18,000 VPH · SAPPHIRE BACK"
         with BuildSketch(Plane.XY.offset(z_top)):
             Circle(radius=18.60)
             Circle(radius=18.45, mode=Mode.SUBTRACT)
@@ -94,23 +93,13 @@ def caseback():
             Circle(radius=16.75, mode=Mode.SUBTRACT)
         extrude(amount=-0.05, mode=Mode.SUBTRACT)
 
-        # 7. Internal Movement Casing Spacer Ring (Holder)
-        # Sits in caseband cavity between movement OD (18.30) and case ID (18.70)
-        # from Z = 0.00 to Z = +2.40 mm
-        with BuildSketch(Plane.XY.offset(0.00)):
-            Circle(radius=r_spacer_od)
-            Circle(radius=r_spacer_id, mode=Mode.SUBTRACT)
-        extrude(amount=2.40, mode=Mode.ADD)
-
-        # Three movement clamp dog tabs securing mainplate flange (at 120 deg intervals)
-        for i in range(3):
-            deg = i * 120.0 + 30.0
-            rad = math.radians(deg)
-            tx = (r_spacer_id - 0.30) * math.cos(rad)
-            ty = (r_spacer_id - 0.30) * math.sin(rad)
-            Box(length=1.20, width=1.60, height=0.50, mode=Mode.ADD).moved(
-                Location((tx, ty, 0.25), (0, 0, deg))
-            )
+        # 7. Caseback Alignment & Thread Spigot Lip (Z = +2.90 to Z = +3.20)
+        # Sits inside the caseband cavity with 0.15 mm clearance fit (r = 18.55 mm < 18.70 mm)
+        # Positioned well clear above the highest movement bridge (movement bridges end at Z <= 2.60 mm)
+        with BuildSketch(Plane.XY.offset(2.90)):
+            Circle(radius=18.55)
+            Circle(radius=r_sapphire - 0.20, mode=Mode.SUBTRACT)
+        extrude(amount=0.30, mode=Mode.ADD)
 
     cbk.part.color = srgb("#D8DEE9")
     return cbk.part

@@ -41,7 +41,17 @@ BOLD = "\033[1m"
 RESET = "\033[0m"
 
 # Silent subprocess execution on Windows to suppress console/terminal popups
-WIN32_FLAGS = {"creationflags": subprocess.CREATE_NO_WINDOW} if sys.platform == "win32" else {}
+WIN32_FLAGS = {
+    "creationflags": subprocess.CREATE_NO_WINDOW,
+    "stdin": subprocess.DEVNULL,
+} if sys.platform == "win32" else {}
+
+# Select python binary: prefer pythonw.exe if available to ensure zero console window creation
+PYTHON_EXE = sys.executable
+if sys.platform == "win32":
+    _pyw = Path(sys.executable).with_name("pythonw.exe")
+    if _pyw.exists():
+        PYTHON_EXE = str(_pyw)
 
 # Disable cadgen daemon to prevent it from spawning background warm workers that open console windows
 os.environ["CADGEN_DAEMON"] = "0"
@@ -195,7 +205,7 @@ class SandboxPipeline:
         for ms in model_scripts:
             rel = ms.relative_to(PROJECT_ROOT)
             t0 = time.time()
-            res = subprocess.run([sys.executable, str(ms)], cwd=str(PROJECT_ROOT), capture_output=True, text=True, **WIN32_FLAGS)
+            res = subprocess.run([PYTHON_EXE, str(ms)], cwd=str(PROJECT_ROOT), capture_output=True, text=True, **WIN32_FLAGS)
             elapsed = time.time() - t0
 
             if res.returncode == 0:

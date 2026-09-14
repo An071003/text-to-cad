@@ -29,7 +29,6 @@ from build123d import (
     Mode,
     Plane,
     extrude,
-    fillet,
 )
 from cadgen import srgb, step
 
@@ -68,106 +67,73 @@ def caseband():
         extrude(amount=1.00, mode=Mode.SUBTRACT)
 
         # 3. Four sculpted lugs (Lug-to-Lug ~ 49.8 mm, 20.0 mm strap opening)
-        # Each lug spans X from 10.00 to 12.80 mm (width 2.80 mm)
         lug_w = 2.80
-        lug_len = 10.50
+        lug_len = 11.00
         lug_h = 4.80
         lug_z = -3.80
 
-        # Top Lugs (Y > 0)
-        # Left Top Lug: X from -12.80 to -10.00 (center X = -11.40)
-        # Right Top Lug: X from +10.00 to +12.80 (center X = +11.40)
+        # Center Y = +-19.40 mm, so outer tip reaches +- (19.40 + 5.50) = +- 24.90 mm -> Lug-to-Lug = 49.80 mm
         lug_centers = [
-            (-11.40, 19.50, lug_z + lug_h / 2.0),
-            (11.40, 19.50, lug_z + lug_h / 2.0),
-            (-11.40, -19.50, lug_z + lug_h / 2.0),
-            (11.40, -19.50, lug_z + lug_h / 2.0),
+            (-11.40, 19.40, lug_z + lug_h / 2.0),
+            (11.40, 19.40, lug_z + lug_h / 2.0),
+            (-11.40, -19.40, lug_z + lug_h / 2.0),
+            (11.40, -19.40, lug_z + lug_h / 2.0),
         ]
 
         for cx, cy, cz in lug_centers:
-            sign_y = 1.0 if cy > 0 else -1.0
-            # Solid lug block tapering towards the strap end
-            Box(
-                length=lug_w,
-                width=lug_len,
-                height=lug_h,
-                mode=Mode.ADD,
-            ).moved(Location((cx, cy + sign_y * 0.5, cz)))
+            with Locations(Location((cx, cy, cz))):
+                Box(length=lug_w, width=lug_len, height=lug_h, mode=Mode.ADD)
 
-        # Clean outer boundary: trim lugs exceeding 24.9 mm in Y
-        with BuildSketch(Plane.XY.offset(z_bottom - 1.0)):
-            Circle(radius=28.00)
-            Circle(radius=25.20, mode=Mode.SUBTRACT)
-        extrude(amount=height + 2.0, mode=Mode.SUBTRACT)
+        # Re-clear internal movement cavity to eliminate any lug corner intrusions
+        with BuildSketch(Plane.XY.offset(-2.20)):
+            Circle(radius=r_chamber)
+        extrude(amount=z_top - (-2.20) + 0.50, mode=Mode.SUBTRACT)
+
+        with BuildSketch(Plane.XY.offset(-3.80)):
+            Circle(radius=18.40)
+        extrude(amount=1.60, mode=Mode.SUBTRACT)
 
         # 4. Spring-bar holes (blind holes of Ø 1.20 mm for 20 mm strap attachment)
-        # Drilled parallel to X-axis into the inside face of each lug (facing X = 0)
         sb_radius = 0.60
         sb_depth = 1.50
         sb_y = 23.50
         sb_z = -1.60
 
         # Top lugs spring-bar holes
-        Cylinder(
-            radius=sb_radius,
-            height=sb_depth,
-            mode=Mode.SUBTRACT,
-        ).moved(Location((-10.00 - sb_depth / 2.0, sb_y, sb_z), (0, 90, 0)))
-
-        Cylinder(
-            radius=sb_radius,
-            height=sb_depth,
-            mode=Mode.SUBTRACT,
-        ).moved(Location((10.00 + sb_depth / 2.0, sb_y, sb_z), (0, 90, 0)))
+        with Locations(Location((-10.00 - sb_depth / 2.0, sb_y, sb_z), (0, 90, 0))):
+            Cylinder(radius=sb_radius, height=sb_depth, mode=Mode.SUBTRACT)
+        with Locations(Location((10.00 + sb_depth / 2.0, sb_y, sb_z), (0, 90, 0))):
+            Cylinder(radius=sb_radius, height=sb_depth, mode=Mode.SUBTRACT)
 
         # Bottom lugs spring-bar holes
-        Cylinder(
-            radius=sb_radius,
-            height=sb_depth,
-            mode=Mode.SUBTRACT,
-        ).moved(Location((-10.00 - sb_depth / 2.0, -sb_y, sb_z), (0, 90, 0)))
-
-        Cylinder(
-            radius=sb_radius,
-            height=sb_depth,
-            mode=Mode.SUBTRACT,
-        ).moved(Location((10.00 + sb_depth / 2.0, -sb_y, sb_z), (0, 90, 0)))
+        with Locations(Location((-10.00 - sb_depth / 2.0, -sb_y, sb_z), (0, 90, 0))):
+            Cylinder(radius=sb_radius, height=sb_depth, mode=Mode.SUBTRACT)
+        with Locations(Location((10.00 + sb_depth / 2.0, -sb_y, sb_z), (0, 90, 0))):
+            Cylinder(radius=sb_radius, height=sb_depth, mode=Mode.SUBTRACT)
 
         # 5. Crown Tube Bore & External Collar
         # Coaxial with winding stem at Y = -2.50, Z = -0.80
-        # Bore through case wall: Ø 2.60 mm
-        Cylinder(
-            radius=1.30,
-            height=8.00,
-            mode=Mode.SUBTRACT,
-        ).moved(Location((19.00, STEM_Y, STEM_Z), (0, 90, 0)))
+        with Locations(Location((19.00, STEM_Y, STEM_Z), (0, 90, 0))):
+            Cylinder(radius=1.30, height=8.00, mode=Mode.SUBTRACT)
 
         # External crown tube collar extending to X = 21.60 mm (Ø 3.40 mm)
-        crown_tube = Cylinder(
-            radius=1.70,
-            height=2.00,
-            mode=Mode.ADD,
-        ).moved(Location((20.60, STEM_Y, STEM_Z), (0, 90, 0)))
+        with Locations(Location((20.60, STEM_Y, STEM_Z), (0, 90, 0))):
+            Cylinder(radius=1.70, height=2.00, mode=Mode.ADD)
 
         # Re-bore through collar
-        Cylinder(
-            radius=1.30,
-            height=4.00,
-            mode=Mode.SUBTRACT,
-        ).moved(Location((20.60, STEM_Y, STEM_Z), (0, 90, 0)))
+        with Locations(Location((20.60, STEM_Y, STEM_Z), (0, 90, 0))):
+            Cylinder(radius=1.30, height=4.00, mode=Mode.SUBTRACT)
 
-        # 6. Smooth bevels on case edges
-        # Top outer chamfer
-        with BuildSketch(Plane.XY.offset(z_top - 0.60)):
-            Circle(radius=r_outer + 1.0)
-            Circle(radius=r_outer - 0.50, mode=Mode.SUBTRACT)
-        extrude(amount=0.70, mode=Mode.SUBTRACT)
+        # 6. Smooth bevels on case outer edges
+        with BuildSketch(Plane.XY.offset(z_top - 0.50)):
+            Circle(radius=r_outer + 5.0)
+            Circle(radius=r_outer - 0.40, mode=Mode.SUBTRACT)
+        extrude(amount=0.60, mode=Mode.SUBTRACT)
 
-        # Bottom outer chamfer
         with BuildSketch(Plane.XY.offset(z_bottom - 0.10)):
-            Circle(radius=r_outer + 1.0)
-            Circle(radius=r_outer - 0.50, mode=Mode.SUBTRACT)
-        extrude(amount=0.70, mode=Mode.SUBTRACT)
+            Circle(radius=r_outer + 5.0)
+            Circle(radius=r_outer - 0.40, mode=Mode.SUBTRACT)
+        extrude(amount=0.60, mode=Mode.SUBTRACT)
 
     # Apply polished stainless steel presentation color
     cb.part.color = srgb("#D8DEE9")

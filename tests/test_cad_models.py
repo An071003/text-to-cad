@@ -23,7 +23,10 @@ PROJECT_ROOT = Path(__file__).resolve().parents[1]
 STEP_DIR = PROJECT_ROOT / "STEP"
 SRC_DIR = PROJECT_ROOT / "src"
 
-WIN32_FLAGS = {"creationflags": subprocess.CREATE_NO_WINDOW} if sys.platform == "win32" else {}
+WIN32_FLAGS = {
+    "creationflags": subprocess.CREATE_NO_WINDOW,
+    "stdin": subprocess.DEVNULL,
+} if sys.platform == "win32" else {}
 os.environ["CADGEN_DAEMON"] = "0"
 
 REQUIRED_STEP_MODELS = [
@@ -180,3 +183,15 @@ def test_gear_train_kinematic_ratio():
     vibrations_per_hour = total_gear_ratio * (2 * escapement_teeth)
 
     assert vibrations_per_hour == 18000.0, f"Calculated frequency {vibrations_per_hour} != 18,000 vph"
+
+
+def test_assembly_interference_free():
+    """Verify zero physical clashes/interferences across all components in the complete watch."""
+    cmd = ["cadgen", "step", "inspect", "interfere", "STEP/watch_caliber_assembly.step"]
+    res = subprocess.run(cmd, cwd=str(PROJECT_ROOT), capture_output=True, text=True, **WIN32_FLAGS)
+    assert res.returncode == 0, f"Interference command failed: {res.stderr}"
+
+    data = json.loads(res.stdout)
+    assert data.get("ok") is True, f"Interference check error: {data.get('errors')}"
+    clashes = data.get("clashes", [])
+    assert len(clashes) == 0, f"Found {len(clashes)} clash(es): {clashes}"

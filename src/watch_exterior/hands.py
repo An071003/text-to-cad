@@ -53,9 +53,11 @@ def make_leaf_blade(length: float, max_width: float, mid_pos: float, thickness: 
         (mid_pos, -max_width * 0.5),
         (mid_pos * 0.4, -max_width * 0.4),
     ]
-    with BuildSketch(Plane.XY):
-        Polygon(pts)
-    return extrude(amount=-thickness)
+    with BuildPart() as bp:
+        with BuildSketch(Plane.XY):
+            Polygon(pts)
+        extrude(amount=-thickness)
+    return bp.part
 
 
 def hour_hand():
