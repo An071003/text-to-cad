@@ -49,7 +49,7 @@ jobs:
 
       - name: Run Pytest Test Suite
         run: |
-          pytest tests/ -v
+          python -m pytest tests/ -v
 
       - name: Upload CAD STEP Models Artifact
         uses: actions/upload-artifact@v4
