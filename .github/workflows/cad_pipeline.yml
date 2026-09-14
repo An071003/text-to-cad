@@ -1,0 +1,62 @@
+name: CAD CI/CD Pipeline & Sandbox Simulation
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  cad-build-validate:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: "pip"
+
+      - name: Install System Dependencies for OpenCASCADE
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libgl1-mesa-glx libegl1-mesa libxrender1 libxcursor1 libxft2 libxinerama1
+
+      - name: Install CAD Runtime & Test Dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r .agents/skills/cad/requirements.txt pytest
+
+      - name: Install Playwright Chromium
+        run: |
+          python -m playwright install --with-deps chromium
+
+      - name: Run CI/CD Sandbox Simulation
+        run: |
+          python scripts/ci_sandbox.py --all
+
+      - name: Run Pytest Test Suite
+        run: |
+          pytest tests/ -v
+
+      - name: Upload CAD STEP Models Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: watch-cad-step-models
+          path: STEP/*.step
+          if-no-files-found: error
+
+      - name: Upload Verification Snapshots
+        uses: actions/upload-artifact@v4
+        with:
+          name: watch-cad-snapshots
+          path: tmp/*.png
+          if-no-files-found: ignore
+
+      - name: Publish CI Summary to Job Summary
+        run: |
+          cat CI_REPORT.md >> $GITHUB_STEP_SUMMARY

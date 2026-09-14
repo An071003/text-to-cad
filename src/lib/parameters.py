@@ -36,5 +36,5 @@ GEAR_DATA = {
     "center": {"pinion_leaves": 12, "wheel_teeth": 80, "module": 0.15},
     "third": {"pinion_leaves": 10, "wheel_teeth": 75, "module": 0.12},
     "fourth": {"pinion_leaves": 10, "wheel_teeth": 80, "module": 0.10},
-    "escape": {"pinion_leaves": 10, "wheel_teeth": 15, "module": 0.08},
+    "escape": {"pinion_leaves": 8, "wheel_teeth": 15, "module": 0.08},
 }
