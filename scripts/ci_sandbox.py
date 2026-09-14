@@ -1,12 +1,12 @@
 #!/usr/bin/env python3
-"""CAD CI/CD Local Sandbox Simulation Runner.
+"""CAD CI/CD Local Sandbox Simulation Runner for Complete Mechanical Wristwatch.
 
 Simulates the complete CI/CD testing and validation pipeline locally for the text-to-cad project:
 1. Environment & Dependency Preflight
 2. Syntax & AST Quality Audits
-3. Parametric Model Building & Compilation
-4. Geometric Integrity & Self-Intersection Validation (cadgen inspect)
-5. Caliber Tolerance & Bounding Box Checks
+3. Parametric Model Building & Compilation (28 models: 22 movement + 6 exterior)
+4. Geometric Integrity & Self-Intersection Validation (cadgen inspect validate)
+5. Horological & Watch Case Dimensional Tolerances
 6. Snapshot Visual Rendering Verification
 7. Structured Artifact & Summary Report Generation
 """
@@ -25,7 +25,6 @@ if hasattr(sys.stdout, "reconfigure"):
 if hasattr(sys.stderr, "reconfigure"):
     sys.stderr.reconfigure(encoding="utf-8", errors="replace")
 
-# Base Paths
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 SRC_DIR = PROJECT_ROOT / "src"
 STEP_DIR = PROJECT_ROOT / "STEP"
@@ -121,62 +120,74 @@ class SandboxPipeline:
 
         return stage_data["passed"]
 
-    def run_stage_2_syntax(self) -> bool:
-        """Run AST syntax audit and UTF-8 encoding verification across all source files."""
-        print(f"\n{BOLD}=== STAGE 2: Code Quality & AST Syntax Audit ==={RESET}")
+    def run_stage_2_ast_audit(self) -> bool:
+        """Audit Python syntax across all src/ and tests/ modules."""
+        print(f"\n{BOLD}=== STAGE 2: Static AST Code & Syntax Audit ==={RESET}")
         import ast
 
-        stage_data = {"files": [], "passed": True}
-        self.results["stages"]["syntax_audit"] = stage_data
+        stage_data = {"audited_files": 0, "errors": [], "passed": True}
+        self.results["stages"]["ast_audit"] = stage_data
 
-        py_files = sorted(list(SRC_DIR.glob("**/*.py")))
-        all_ok = True
+        py_files = list(SRC_DIR.glob("**/*.py")) + list((PROJECT_ROOT / "tests").glob("**/*.py"))
+        has_error = False
 
-        for pf in py_files:
-            rel_path = pf.relative_to(PROJECT_ROOT)
+        for py_file in py_files:
+            rel = py_file.relative_to(PROJECT_ROOT)
             try:
-                content = pf.read_text(encoding="utf-8")
-                ast.parse(content, filename=str(pf))
-                stage_data["files"].append({"file": str(rel_path), "status": "OK"})
-                if self.verbose:
-                    self.log("AST", f"{rel_path} - Syntax valid", "PASS")
+                content = py_file.read_text(encoding="utf-8")
+                ast.parse(content, filename=str(rel))
             except Exception as e:
-                all_ok = False
-                stage_data["files"].append({"file": str(rel_path), "status": "ERROR", "error": str(e)})
-                self.log("AST", f"{rel_path} - Error: {e}", "FAIL")
+                has_error = True
+                stage_data["errors"].append({"file": str(rel), "error": str(e)})
+                self.log("AST", f"{rel}: Syntax Error -> {e}", "FAIL")
 
-        stage_data["passed"] = all_ok
-        self.log("Syntax Audit", f"Audited {len(py_files)} Python source files (All valid: {all_ok})", "PASS" if all_ok else "FAIL")
-        return all_ok
+        stage_data["audited_files"] = len(py_files)
+        stage_data["passed"] = not has_error
+        if not has_error:
+            self.log("AST", f"Successfully audited {len(py_files)} Python source files (0 errors)", "PASS")
+        return not has_error
 
     def run_stage_3_build_models(self) -> bool:
-        """Execute and compile all CAD models in src/."""
-        print(f"\n{BOLD}=== STAGE 3: Model Building & STEP Compilation ==={RESET}")
+        """Execute and compile all 28 parametric CAD models into STEP files."""
+        print(f"\n{BOLD}=== STAGE 3: Parametric CAD Compilation (28 Models) ==={RESET}")
         stage_data = {"models": [], "passed": True}
-        self.results["stages"]["model_builds"] = stage_data
+        self.results["stages"]["build"] = stage_data
 
         model_scripts = [
+            # 1. Mainplate & Bridges
             SRC_DIR / "mainplate_and_bridges" / "mainplate.py",
             SRC_DIR / "mainplate_and_bridges" / "barrel_bridge.py",
             SRC_DIR / "mainplate_and_bridges" / "train_bridge.py",
             SRC_DIR / "mainplate_and_bridges" / "pallet_cock.py",
             SRC_DIR / "mainplate_and_bridges" / "balance_cock.py",
+            # 2. Gear Train
             SRC_DIR / "gear_train" / "center_wheel.py",
             SRC_DIR / "gear_train" / "third_wheel.py",
             SRC_DIR / "gear_train" / "fourth_wheel.py",
+            # 3. Escapement & Regulating Organ
             SRC_DIR / "escapement" / "escape_wheel.py",
             SRC_DIR / "escapement" / "pallet_fork.py",
             SRC_DIR / "escapement" / "pallet_jewels.py",
             SRC_DIR / "balance" / "balance_wheel.py",
             SRC_DIR / "balance" / "hairspring.py",
             SRC_DIR / "balance" / "roller_table.py",
+            # 4. Power & Keyless Works
             SRC_DIR / "winding_and_barrel" / "mainspring_barrel.py",
             SRC_DIR / "winding_and_barrel" / "ratchet_and_crown.py",
             SRC_DIR / "winding_and_barrel" / "winding_mechanism.py",
             SRC_DIR / "winding_and_barrel" / "motion_work.py",
+            # 5. Fasteners & Jewels
             SRC_DIR / "fasteners" / "screws.py",
             SRC_DIR / "fasteners" / "jewels.py",
             SRC_DIR / "fasteners" / "steady_pins.py",
+            # 6. Watch Exterior Components
+            SRC_DIR / "watch_exterior" / "caseband.py",
+            SRC_DIR / "watch_exterior" / "bezel.py",
+            SRC_DIR / "watch_exterior" / "dial.py",
+            SRC_DIR / "watch_exterior" / "hands.py",
+            SRC_DIR / "watch_exterior" / "crown.py",
+            SRC_DIR / "watch_exterior" / "caseback.py",
+            # 7. Complete Top-Level Assembly
             SRC_DIR / "assembly.py",
         ]
 
@@ -234,7 +245,7 @@ class SandboxPipeline:
                     "valid": True,
                     "occurrences": details.get("occurrenceCount", 1),
                 })
-                self.log("Validate", f"{sf.name:<26} (0 errors, sound solid)", "PASS")
+                self.log("Validate", f"{sf.name:<28} (0 errors, sound solid)", "PASS")
             else:
                 all_ok = False
                 stage_data["files"].append({
@@ -242,14 +253,14 @@ class SandboxPipeline:
                     "valid": False,
                     "error": res.stderr or res.stdout,
                 })
-                self.log("Validate", f"{sf.name:<26} FAILED validation", "FAIL")
+                self.log("Validate", f"{sf.name:<28} FAILED validation", "FAIL")
 
         stage_data["passed"] = all_ok
         return all_ok
 
     def run_stage_5_caliber_tolerance(self) -> bool:
-        """Check assembly bounding box against ETA 6497/6498 specifications."""
-        print(f"\n{BOLD}=== STAGE 5: Horological Caliber Dimensional Tolerances ==={RESET}")
+        """Check assembly bounding box against ETA 6497 and 42 mm watch specifications."""
+        print(f"\n{BOLD}=== STAGE 5: Watch Caliber & Case Dimensional Tolerances ==={RESET}")
         stage_data = {"metrics": {}, "passed": True}
         self.results["stages"]["tolerances"] = stage_data
 
@@ -267,7 +278,6 @@ class SandboxPipeline:
             token = data["tokens"][0]
             summary = token["summary"]
             facts = token["entryFacts"]
-            bounds = summary["bounds"]
 
             size_x, size_y, size_z = facts["size"]
             face_count = summary["faceCount"]
@@ -275,27 +285,27 @@ class SandboxPipeline:
             occurrences = summary["occurrenceCount"]
 
             # Tolerance rules:
-            # Caliber diameter is 36.60 mm (+/- 0.5 mm on circular bounds)
-            # Winding stem extends outward on X axis (allowed up to 45 mm)
-            # Caliber height should not exceed 8.0 mm
-            diameter_ok = abs(size_y - 36.60) < 1.0
-            height_ok = size_z <= 8.0
-            parts_ok = occurrences >= 20
+            # Lug-to-lug span along Y axis is ~49.8 mm (allowed between 46.0 and 52.0 mm)
+            # Total watch thickness along Z should not exceed 12.50 mm
+            # Watch assembly must contain at least 25 components
+            lug_to_lug_ok = 46.0 <= size_y <= 52.0
+            height_ok = size_z <= 12.50
+            parts_ok = occurrences >= 25
 
-            all_ok = diameter_ok and height_ok and parts_ok
+            all_ok = lug_to_lug_ok and height_ok and parts_ok
 
             stage_data["metrics"] = {
                 "size": [round(size_x, 2), round(size_y, 2), round(size_z, 2)],
                 "faces": face_count,
                 "edges": edge_count,
                 "components": occurrences,
-                "diameter_check": diameter_ok,
+                "lug_to_lug_check": lug_to_lug_ok,
                 "height_check": height_ok,
                 "parts_count_check": parts_ok,
             }
             stage_data["passed"] = all_ok
 
-            self.log("Dimensions", f"Caliber Size: {size_x:.1f} x {size_y:.1f} x {size_z:.1f} mm", "PASS" if all_ok else "FAIL")
+            self.log("Dimensions", f"Watch Size: {size_x:.1f} x {size_y:.1f} x {size_z:.1f} mm", "PASS" if all_ok else "FAIL")
             self.log("Complexity", f"Faces: {face_count:,} | Edges: {edge_count:,} | Components: {occurrences}", "INFO")
             return all_ok
         except Exception as e:
@@ -310,17 +320,19 @@ class SandboxPipeline:
         self.results["stages"]["snapshots"] = stage_data
 
         snapshot_targets = [
-            ("STEP/watch_caliber_assembly.step", "tmp/ci_assembly_top.png", "default"),
-            ("STEP/watch_caliber_assembly.step", "tmp/ci_assembly_iso.png", "45:35"),
-            ("STEP/balance_wheel.step", "tmp/ci_balance_wheel.png", "default"),
-            ("STEP/escape_wheel.step", "tmp/ci_escape_wheel.png", "default"),
+            ("STEP/watch_caliber_assembly.step", "tmp/watch_isometric.png", ["--camera", "45:35"]),
+            ("STEP/watch_caliber_assembly.step", "tmp/watch_front_dial.png", ["--camera", "0:-89"]),
+            ("STEP/watch_caliber_assembly.step", "tmp/watch_back_sapphire.png", ["--camera", "0:89"]),
+            ("STEP/dial.step", "tmp/watch_dial_detail.png", []),
+            ("STEP/caseband.step", "tmp/watch_caseband_detail.png", ["--camera", "45:35"]),
+            ("STEP/watch_caliber_assembly.step", "tmp/watch_running_t0.png", ["--animation", "running_real_time", "--time", "0.0"]),
+            ("STEP/watch_caliber_assembly.step", "tmp/watch_running_t02.png", ["--animation", "running_real_time", "--time", "0.2"]),
+            ("STEP/watch_caliber_assembly.step", "tmp/watch_running_t2.png", ["--animation", "running_real_time", "--time", "2.0"]),
         ]
 
         all_ok = True
-        for target, out, cam in snapshot_targets:
-            cmd = ["cadgen", "step", "snapshot", target, out]
-            if cam != "default":
-                cmd += ["--camera", cam]
+        for target, out, extra_args in snapshot_targets:
+            cmd = ["cadgen", "step", "snapshot", target, out] + extra_args
 
             t0 = time.time()
             res = subprocess.run(cmd, cwd=str(PROJECT_ROOT), capture_output=True, text=True, **WIN32_FLAGS)
@@ -341,83 +353,102 @@ class SandboxPipeline:
 
     def generate_report(self):
         """Generate both JSON and Markdown CI reports."""
-        duration = time.time() - self.start_time
-        self.results["summary"]["duration_seconds"] = round(duration, 2)
+        duration = round(time.time() - self.start_time, 2)
+        self.results["summary"]["duration_seconds"] = duration
 
-        stages = self.results["stages"]
-        total_stages = len(stages)
-        passed_stages = sum(1 for s in stages.values() if s.get("passed", False))
-        overall_ok = passed_stages == total_stages
+        # Count passes/fails
+        total = 0
+        passed = 0
+        for st_name, st_data in self.results["stages"].items():
+            total += 1
+            if st_data.get("passed", False):
+                passed += 1
 
-        self.results["summary"]["overall_success"] = overall_ok
+        self.results["summary"]["total_stages"] = total
+        self.results["summary"]["passed_stages"] = passed
+        self.results["summary"]["failed_stages"] = total - passed
 
         # Save JSON
-        REPORT_JSON.write_text(json.dumps(self.results, indent=2), encoding="utf-8")
+        with open(REPORT_JSON, "w", encoding="utf-8") as f:
+            json.dump(self.results, f, indent=2)
 
         # Save Markdown Report
         md = []
-        status_badge = "![PASSED](https://img.shields.io/badge/CI_PIPELINE-PASSED-brightgreen)" if overall_ok else "![FAILED](https://img.shields.io/badge/CI_PIPELINE-FAILED-red)"
-        md.append(f"# CAD CI/CD Sandbox Simulation Report\n")
-        md.append(f"{status_badge}  `Generated: {self.results['timestamp']}`  `Duration: {duration:.2f}s`\n")
-        md.append("## Executive Summary\n")
-        md.append(f"| Stage | Name | Status | Details |")
-        md.append(f"| :---: | :--- | :---: | :--- |")
+        md.append("# CAD CI/CD Sandbox Simulation Report")
+        md.append(f"\n**Timestamp**: `{self.results['timestamp']}`  ")
+        md.append(f"**Total Duration**: `{duration}s`  ")
+        status_badge = "PASSED" if (total == passed) else "FAILED"
+        md.append(f"**Overall Status**: `{status_badge}` ({passed}/{total} stages passed)\n")
 
-        for key, stage in stages.items():
-            st_badge = "✅ PASS" if stage.get("passed", False) else "❌ FAIL"
-            name = key.replace("_", " ").title()
-            details_str = f"{len(stage.get('files', stage.get('models', stage.get('checks', []))))} checks"
-            md.append(f"| {st_badge} | **{name}** | {stage.get('passed')} | {details_str} |")
+        md.append("## 1. Pipeline Execution Stages\n")
+        md.append("| Stage | Description | Status |")
+        md.append("| :--- | :--- | :--- |")
+        descriptions = {
+            "environment": "Preflight Environment & Dependencies",
+            "ast_audit": "Static AST Syntax Check",
+            "build": "Parametric Model Compilation (28 models)",
+            "geometric_validation": "OpenCASCADE BRepCheck Integrity",
+            "tolerances": "42 mm Watch Case & Caliber Bounding Box Checks",
+            "snapshots": "Visual Rendering & Animation Snapshots",
+        }
+        for st_name, st_data in self.results["stages"].items():
+            desc = descriptions.get(st_name, st_name)
+            st_str = "PASS" if st_data.get("passed") else "FAIL"
+            md.append(f"| `{st_name}` | {desc} | **{st_str}** |")
 
-        tol = stages.get("tolerances", {}).get("metrics", {})
-        if tol:
-            md.append(f"\n## Caliber Geometry & Verification Facts\n")
-            md.append(f"- **Total Components**: {tol.get('components', 'N/A')} parts")
-            md.append(f"- **Face Count**: {tol.get('faces', 0):,} faces")
-            md.append(f"- **Edge Count**: {tol.get('edges', 0):,} edges")
-            md.append(f"- **Bounding Box Dimensions**: `{tol.get('size', [])}` mm (Caliber 16.5''' target: Ø 36.60 mm)")
+        md.append("\n## 2. Watch Caliber & Case Specifications\n")
+        m = self.results["stages"].get("tolerances", {}).get("metrics", {})
+        if m:
+            md.append(f"- **Dimensions**: `{m.get('size', [])}` mm (X x Y x Z)")
+            md.append(f"- **Topology Complexity**: `{m.get('faces', 0):,}` faces, `{m.get('edges', 0):,}` edges")
+            md.append(f"- **Total Components**: `{m.get('components', 0)}` occurrences in assembly")
+            md.append(f"- **Lug-to-Lug Check**: `{'PASSED' if m.get('lug_to_lug_check') else 'FAILED'}`")
+            md.append(f"- **Thickness Check (<= 12.5mm)**: `{'PASSED' if m.get('height_check') else 'FAILED'}`")
 
-        md.append(f"\n## Artifacts Generated\n")
-        step_files = list(STEP_DIR.glob("*.step"))
-        md.append(f"- **Total STEP Files**: {len(step_files)}")
-        for sf in step_files:
-            size_kb = sf.stat().st_size / 1024.0
-            md.append(f"  - `{sf.name}` ({size_kb:.1f} KB)")
+        with open(REPORT_MD, "w", encoding="utf-8") as f:
+            f.write("\n".join(md) + "\n")
 
-        REPORT_MD.write_text("\n".join(md), encoding="utf-8")
-
-        print(f"\n{BOLD}===================================================={RESET}")
-        if overall_ok:
-            print(f"{GREEN}{BOLD}[SUCCESS] CI/CD SANDBOX PIPELINE PASSED! (Duration: {duration:.2f}s){RESET}")
-        else:
-            print(f"{RED}{BOLD}[FAILURE] CI/CD SANDBOX PIPELINE ENCOUNTERED FAILURES!{RESET}")
-        print(f"Detailed Markdown report written to: {REPORT_MD}")
-        print(f"JSON metrics exported to: {REPORT_JSON}")
-        print(f"{BOLD}===================================================={RESET}\n")
-
-        return 0 if overall_ok else 1
+        print(f"\n{BOLD}=== CI/CD Report Generated ==={RESET}")
+        self.log("Report", f"Markdown saved to {REPORT_MD.relative_to(PROJECT_ROOT)}", "PASS")
+        self.log("Report", f"JSON data saved to {REPORT_JSON.relative_to(PROJECT_ROOT)}", "PASS")
 
 
 def main():
-    parser = argparse.ArgumentParser(description="CAD CI/CD Local Sandbox Simulation")
-    parser.add_argument("--all", action="store_true", help="Run full pipeline")
-    parser.add_argument("--skip-build", action="store_true", help="Skip model rebuild, only validate existing files")
-    parser.add_argument("--verbose", action="store_true", help="Verbose output")
+    parser = argparse.ArgumentParser(description="Run local CAD CI/CD Sandbox Simulation.")
+    parser.add_argument("--all", action="store_true", help="Run all pipeline stages.")
+    parser.add_argument("--stage", type=int, choices=[1, 2, 3, 4, 5, 6], help="Run a specific stage.")
     args = parser.parse_args()
 
-    sandbox = SandboxPipeline(verbose=args.verbose)
+    pipeline = SandboxPipeline()
+    success = True
 
-    # Execute Pipeline
-    ok = sandbox.run_stage_1_environment()
-    ok = sandbox.run_stage_2_syntax() and ok
-    if not args.skip_build:
-        ok = sandbox.run_stage_3_build_models() and ok
-    ok = sandbox.run_stage_4_geometric_validation() and ok
-    ok = sandbox.run_stage_5_caliber_tolerance() and ok
-    ok = sandbox.run_stage_6_snapshots() and ok
+    if args.all or args.stage is None:
+        stages = [
+            pipeline.run_stage_1_environment,
+            pipeline.run_stage_2_ast_audit,
+            pipeline.run_stage_3_build_models,
+            pipeline.run_stage_4_geometric_validation,
+            pipeline.run_stage_5_caliber_tolerance,
+            pipeline.run_stage_6_snapshots,
+        ]
+        for stage_fn in stages:
+            ok = stage_fn()
+            if not ok:
+                success = False
+                break
+    else:
+        stage_map = {
+            1: pipeline.run_stage_1_environment,
+            2: pipeline.run_stage_2_ast_audit,
+            3: pipeline.run_stage_3_build_models,
+            4: pipeline.run_stage_4_geometric_validation,
+            5: pipeline.run_stage_5_caliber_tolerance,
+            6: pipeline.run_stage_6_snapshots,
+        }
+        success = stage_map[args.stage]()
 
-    exit_code = sandbox.generate_report()
-    sys.exit(exit_code)
+    pipeline.generate_report()
+    sys.exit(0 if success else 1)
 
 
 if __name__ == "__main__":

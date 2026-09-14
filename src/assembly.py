@@ -1,16 +1,23 @@
-"""Top-Level Assembly Model for Mechanical Watch Caliber (ETA 6497/6498 Reference).
+"""Top-Level Assembly Model for Complete 42 mm Mechanical Dress Wristwatch.
 
-Integrates all 7 subsystems into a fully functional, validated kinematic 3D CAD assembly:
+Reference: ETA 6497/6498 Caliber (Ø 36.60 mm, 18,000 vph / 2.5 Hz) housed in a
+classic 42.00 mm stainless-steel wristwatch with exhibition caseback, front and
+rear sapphire crystals, classical sector dial, and blued-steel hands.
+
+Integrates all 8 subsystems into a fully functional, validated kinematic 3D CAD assembly:
 1. Mainplate & Bridges (Mainplate, Barrel Bridge, Train Bridge, Pallet Cock, Balance Cock)
 2. Gear Train (Center, Third, Fourth Wheel & Pinion Assemblies)
 3. Escapement (Escape Wheel, Pallet Fork, Pallet Jewels)
 4. Balance Assembly (Balance Wheel, Hairspring, Double Roller Table)
 5. Power & Winding (Mainspring Barrel, Ratchet & Crown Wheels, Keyless Winding Mechanism, Motion Work)
-6. Fasteners & Jewels (Bridge Screws, Ruby Jewels, Steady Pins)
+6. Fasteners & Jewels (Bridge Screws, Synthetic Ruby Jewels, Steady Pins)
+7. Dial & Hands (Sector Dial, Leaf Hour & Minute Hands, Small Seconds Needle at 9 o'clock)
+8. Watch Exterior (Caseband with 4 Lugs, Bezel & Front Sapphire, Knurled Crown, Exhibition Caseback & Spacer)
 
 Kinematics:
 - Verified physical gear ratios: 1 : -8 : +60 : -600 (Center -> Third -> Fourth -> Escape)
 - Revolute joints defined at exact horological pivot coordinates
+- Coaxial hand drives: 1:1 minute hand, 1/12 hour hand, 60:1 small-seconds hand
 - Named poses: rest, wound, time_setting, running_preview
 """
 
@@ -45,6 +52,8 @@ from lib.datums import (
     ESCAPE_PIVOT,
     FOURTH_PIVOT,
     PALLET_PIVOT,
+    STEM_Y,
+    STEM_Z,
     THIRD_PIVOT,
 )
 from mainplate_and_bridges.balance_cock import balance_cock
@@ -52,6 +61,12 @@ from mainplate_and_bridges.barrel_bridge import barrel_bridge
 from mainplate_and_bridges.mainplate import mainplate
 from mainplate_and_bridges.pallet_cock import pallet_cock
 from mainplate_and_bridges.train_bridge import train_bridge
+from watch_exterior.bezel import bezel
+from watch_exterior.caseback import caseback
+from watch_exterior.caseband import caseband
+from watch_exterior.crown import crown
+from watch_exterior.dial import dial
+from watch_exterior.hands import hour_hand, minute_hand, seconds_hand
 from winding_and_barrel.mainspring_barrel import mainspring_barrel
 from winding_and_barrel.motion_work import motion_work
 from winding_and_barrel.ratchet_and_crown import ratchet_and_crown
@@ -116,6 +131,46 @@ KINEMATICS = {
             direction=(0, 0, 1),
             limits=(-270.0, 270.0),
         ),
+        cadgen.revolute(
+            "minute_hand_rot",
+            parent="#mainplate",
+            child="#minute_hand",
+            origin=(CENTER_PIVOT[0], CENTER_PIVOT[1], 0.0),
+            direction=(0, 0, 1),
+            limits=(-360.0, 360.0),
+        ),
+        cadgen.revolute(
+            "hour_hand_rot",
+            parent="#mainplate",
+            child="#hour_hand",
+            origin=(CENTER_PIVOT[0], CENTER_PIVOT[1], 0.0),
+            direction=(0, 0, 1),
+            limits=(-360.0, 360.0),
+        ),
+        cadgen.revolute(
+            "seconds_hand_rot",
+            parent="#mainplate",
+            child="#seconds_hand",
+            origin=(FOURTH_PIVOT[0], FOURTH_PIVOT[1], 0.0),
+            direction=(0, 0, 1),
+            limits=(-360.0, 360.0),
+        ),
+        cadgen.revolute(
+            "crown_rot",
+            parent="#mainplate",
+            child="#winding_crown",
+            origin=(21.60, STEM_Y, STEM_Z),
+            direction=(1, 0, 0),
+            limits=(-360.0, 360.0),
+        ),
+        cadgen.slider(
+            "crown_trans",
+            parent="#mainplate",
+            child="#winding_crown",
+            origin=(21.60, STEM_Y, STEM_Z),
+            direction=(1, 0, 0),
+            limits=(0.0, 1.20),
+        ),
     ],
     "couplings": [
         cadgen.couple(
@@ -125,6 +180,9 @@ KINEMATICS = {
                 "third_wheel_rot": -8.0,
                 "fourth_wheel_rot": 60.0,
                 "escape_wheel_rot": -600.0,
+                "minute_hand_rot": 1.0,
+                "hour_hand_rot": 1.0 / 12.0,
+                "seconds_hand_rot": 60.0,
             },
             limits=(-360.0, 360.0),
         ),
@@ -137,21 +195,34 @@ KINEMATICS = {
             "escape_wheel_rot": 0.0,
             "pallet_rot": 0.0,
             "balance_rot": 0.0,
+            "minute_hand_rot": 0.0,
+            "hour_hand_rot": 0.0,
+            "seconds_hand_rot": 0.0,
+            "crown_rot": 0.0,
+            "crown_trans": 0.0,
         },
         "wound": {
             "barrel_rot": 90.0,
             "balance_rot": 200.0,
             "pallet_rot": 4.5,
+            "crown_rot": 720.0,
+            "crown_trans": 0.0,
         },
         "time_setting": {
-            "center_wheel_rot": 30.0,
-            "third_wheel_rot": -240.0,
+            "crown_trans": 1.20,
+            "minute_hand_rot": 360.0,
+            "hour_hand_rot": 30.0,
+            "seconds_hand_rot": 0.0,
         },
         "running_preview": {
             "balance_rot": 180.0,
             "pallet_rot": -4.5,
             "escape_wheel_rot": 12.0,
             "fourth_wheel_rot": 1.2,
+            "seconds_hand_rot": 1.2,
+            "minute_hand_rot": 0.02,
+            "hour_hand_rot": 0.0016,
+            "crown_trans": 0.0,
         },
     },
 }
@@ -160,7 +231,7 @@ KINEMATICS = {
 @step(out="../STEP/watch_caliber_assembly.step", kinematics=KINEMATICS)
 @glb(out="../STEP/watch_caliber_assembly.glb")
 def watch_caliber_assembly():
-    asm = AssemblyHelper("ETA_6497_Caliber_Assembly")
+    asm = AssemblyHelper("ETA_6497_Watch_Assembly")
 
     # 1. Base Mainplate
     p_mainplate = mainplate()
@@ -223,6 +294,28 @@ def watch_caliber_assembly():
     asm.add(p_screws, "bridge_fasteners")
     asm.add(p_jewels, "synthetic_ruby_jewels")
     asm.add(p_pins, "alignment_steady_pins")
+
+    # 8. Dial & Hands (Dial Side Z < 0)
+    p_dial = dial()
+    p_h_hand = hour_hand()
+    p_m_hand = minute_hand()
+    p_s_hand = seconds_hand()
+
+    asm.add(p_dial, "dial_plate")
+    asm.add(p_h_hand, "hour_hand")
+    asm.add(p_m_hand, "minute_hand")
+    asm.add(p_s_hand, "seconds_hand")
+
+    # 9. Watch Exterior (Caseband, Bezel & Crystals, Crown, Exhibition Caseback)
+    p_caseband = caseband()
+    p_bezel = bezel()
+    p_crown = crown()
+    p_caseback = caseback()
+
+    asm.add(p_caseband, "caseband")
+    asm.add(p_bezel, "bezel_and_crystal")
+    asm.add(p_crown, "winding_crown")
+    asm.add(p_caseback, "exhibition_caseback")
 
     return asm.build()
 
