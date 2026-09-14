@@ -7,6 +7,11 @@ Integrates all 7 subsystems into a fully functional, validated kinematic 3D CAD 
 4. Balance Assembly (Balance Wheel, Hairspring, Double Roller Table)
 5. Power & Winding (Mainspring Barrel, Ratchet & Crown Wheels, Keyless Winding Mechanism, Motion Work)
 6. Fasteners & Jewels (Bridge Screws, Ruby Jewels, Steady Pins)
+
+Kinematics:
+- Verified physical gear ratios: 1 : -8 : +60 : -600 (Center -> Third -> Fourth -> Escape)
+- Revolute joints defined at exact horological pivot coordinates
+- Named poses: rest, wound, time_setting, running_preview
 """
 
 import sys
@@ -16,8 +21,9 @@ SRC_DIR = Path(__file__).resolve().parent
 if str(SRC_DIR) not in sys.path:
     sys.path.insert(0, str(SRC_DIR))
 
-from build123d import Compound, Location
-from cadgen import step
+import cadgen
+from build123d import Location
+from cadgen import glb, step
 from cadgen.assembly import AssemblyHelper
 
 from balance.balance_wheel import balance_wheel
@@ -51,8 +57,108 @@ from winding_and_barrel.motion_work import motion_work
 from winding_and_barrel.ratchet_and_crown import ratchet_and_crown
 from winding_and_barrel.winding_mechanism import winding_mechanism
 
+# Kinematic articulation & gear coupling definitions
+KINEMATICS = {
+    "mates": [
+        cadgen.revolute(
+            "barrel_rot",
+            parent="#mainplate",
+            child="#mainspring_barrel",
+            origin=(BARREL_PIVOT[0], BARREL_PIVOT[1], 0.0),
+            direction=(0, 0, 1),
+            limits=(-360.0, 360.0),
+        ),
+        cadgen.revolute(
+            "center_wheel_rot",
+            parent="#mainplate",
+            child="#center_wheel_assembly",
+            origin=(CENTER_PIVOT[0], CENTER_PIVOT[1], 0.0),
+            direction=(0, 0, 1),
+            limits=(-360.0, 360.0),
+        ),
+        cadgen.revolute(
+            "third_wheel_rot",
+            parent="#mainplate",
+            child="#third_wheel_assembly",
+            origin=(THIRD_PIVOT[0], THIRD_PIVOT[1], 0.0),
+            direction=(0, 0, 1),
+            limits=(-360.0, 360.0),
+        ),
+        cadgen.revolute(
+            "fourth_wheel_rot",
+            parent="#mainplate",
+            child="#fourth_wheel_assembly",
+            origin=(FOURTH_PIVOT[0], FOURTH_PIVOT[1], 0.0),
+            direction=(0, 0, 1),
+            limits=(-360.0, 360.0),
+        ),
+        cadgen.revolute(
+            "escape_wheel_rot",
+            parent="#mainplate",
+            child="#escape_wheel_assembly",
+            origin=(ESCAPE_PIVOT[0], ESCAPE_PIVOT[1], 0.0),
+            direction=(0, 0, 1),
+            limits=(-360.0, 360.0),
+        ),
+        cadgen.revolute(
+            "pallet_rot",
+            parent="#mainplate",
+            child="#pallet_fork",
+            origin=(PALLET_PIVOT[0], PALLET_PIVOT[1], 0.0),
+            direction=(0, 0, 1),
+            limits=(-4.5, 4.5),
+        ),
+        cadgen.revolute(
+            "balance_rot",
+            parent="#mainplate",
+            child="#balance_wheel",
+            origin=(BALANCE_PIVOT[0], BALANCE_PIVOT[1], 0.0),
+            direction=(0, 0, 1),
+            limits=(-270.0, 270.0),
+        ),
+    ],
+    "couplings": [
+        cadgen.couple(
+            "gear_train",
+            {
+                "center_wheel_rot": 1.0,
+                "third_wheel_rot": -8.0,
+                "fourth_wheel_rot": 60.0,
+                "escape_wheel_rot": -600.0,
+            },
+            limits=(-360.0, 360.0),
+        ),
+    ],
+    "poses": {
+        "rest": {
+            "center_wheel_rot": 0.0,
+            "third_wheel_rot": 0.0,
+            "fourth_wheel_rot": 0.0,
+            "escape_wheel_rot": 0.0,
+            "pallet_rot": 0.0,
+            "balance_rot": 0.0,
+        },
+        "wound": {
+            "barrel_rot": 90.0,
+            "balance_rot": 200.0,
+            "pallet_rot": 4.5,
+        },
+        "time_setting": {
+            "center_wheel_rot": 30.0,
+            "third_wheel_rot": -240.0,
+        },
+        "running_preview": {
+            "balance_rot": 180.0,
+            "pallet_rot": -4.5,
+            "escape_wheel_rot": 12.0,
+            "fourth_wheel_rot": 1.2,
+        },
+    },
+}
 
-@step(out="../STEP/watch_caliber_assembly.step")
+
+@step(out="../STEP/watch_caliber_assembly.step", kinematics=KINEMATICS)
+@glb(out="../STEP/watch_caliber_assembly.glb")
 def watch_caliber_assembly():
     asm = AssemblyHelper("ETA_6497_Caliber_Assembly")
 
@@ -71,7 +177,7 @@ def watch_caliber_assembly():
     asm.add(p_pallet_cock, "pallet_cock")
     asm.add(p_balance_cock, "balance_cock")
 
-    # 3. Gear Train Components
+    # 3. Gear Train Components (placed at exact kinematic pivots)
     p_center = center_wheel().moved(Location((CENTER_PIVOT[0], CENTER_PIVOT[1], 0)))
     p_third = third_wheel().moved(Location((THIRD_PIVOT[0], THIRD_PIVOT[1], 0)))
     p_fourth = fourth_wheel().moved(Location((FOURTH_PIVOT[0], FOURTH_PIVOT[1], 0)))

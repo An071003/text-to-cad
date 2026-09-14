@@ -23,12 +23,13 @@ from build123d import (
     Location,
     Locations,
     Mode,
+    Plane,
     Rectangle,
     Rot,
     extrude,
     fillet,
 )
-from cadgen import step
+from cadgen import srgb, step
 
 from lib.datums import (
     BALANCE_COCK_PINS,
@@ -60,14 +61,12 @@ def mainplate():
     thickness = MAINPLATE_THICKNESS  # 2.20 mm
 
     with BuildPart() as mp:
-        # Base circular plate, extruding from Z = -thickness up to Z = 0
-        with BuildSketch():
+        # Base circular plate, extruding from Z = 0 down to Z = -thickness
+        with BuildSketch(Plane.XY):
             Circle(radius=radius)
-        extrude(amount=thickness)
-        # Shift down so top face is precisely Z = 0
-        mp.part = mp.part.moved(Location((0, 0, -thickness)))
+        extrude(amount=-thickness)
 
-        top_face = mp.faces().sort_by().last
+        top_face = Plane.XY
 
         # --- Recesses (Pockets for gear train & moving parts) ---
         # 1. Barrel recess
@@ -108,7 +107,7 @@ def mainplate():
 
         # --- Through Holes & Jewel Settings ---
         jewel_holes = [
-            (CENTER_PIVOT, 0.60),       # Center tube hole (radius)
+            (CENTER_PIVOT, 0.85),       # Center tube clearance hole (r = 0.85 mm for cannon pinion)
             (THIRD_PIVOT, 0.60),        # Third jewel hole
             (FOURTH_PIVOT, 0.60),       # Fourth long pivot jewel hole
             (ESCAPE_PIVOT, 0.60),       # Escape jewel hole
@@ -121,7 +120,7 @@ def mainplate():
                     Circle(radius=r)
             extrude(amount=-thickness, mode=Mode.SUBTRACT)
 
-        # --- Screw Holes for Bridges (M1.2 tap holes, r = 0.50 mm) ---
+        # --- Screw Holes for Bridges (M1.2 clearance holes, r = 0.65 mm) ---
         screw_holes = (
             BARREL_BRIDGE_SCREWS
             + TRAIN_BRIDGE_SCREWS
@@ -129,10 +128,10 @@ def mainplate():
         )
         with BuildSketch(top_face):
             with Locations(screw_holes):
-                Circle(radius=0.50)
+                Circle(radius=0.65)
         extrude(amount=-1.50, mode=Mode.SUBTRACT)
 
-        # --- Steady Pin Holes (Dowel holes, r = 0.40 mm) ---
+        # --- Steady Pin Holes (Dowel holes, r = 0.45 mm) ---
         pin_holes = (
             BARREL_BRIDGE_PINS
             + TRAIN_BRIDGE_PINS
@@ -141,19 +140,32 @@ def mainplate():
         )
         with BuildSketch(top_face):
             with Locations(pin_holes):
-                Circle(radius=0.40)
+                Circle(radius=0.45)
         extrude(amount=-1.20, mode=Mode.SUBTRACT)
 
         # --- Stem clearance bore at 3 o'clock ---
-        with BuildSketch():
-            with Locations([(radius - 1.50, STEM_Y, STEM_Z)]):
+        with BuildSketch(Plane.YZ.offset(radius - 1.50)):
+            with Locations([(STEM_Y, STEM_Z)]):
                 Circle(radius=0.75)
-        # Cut along X-axis
-        stem_bore = Cylinder(radius=0.75, height=6.0)
-        stem_bore = stem_bore.moved(Location((radius - 1.50, STEM_Y, STEM_Z), (0, 90, 0)))
-        mp.part = mp.part - stem_bore
+        extrude(amount=6.0, mode=Mode.SUBTRACT)
 
-    return mp.part
+        # --- Dial-Side Recesses (Z < 0) for Motion Work and Keyless Mechanism ---
+        with BuildSketch(Plane.XY.offset(-thickness)):
+            with Locations([CENTER_PIVOT]):
+                Circle(radius=5.50)
+            with Locations([(-4.20, -1.80)]):
+                Circle(radius=5.00)
+        extrude(amount=1.50, mode=Mode.SUBTRACT)
+
+        with BuildSketch(Plane.XY.offset(-thickness)):
+            with Locations([(12.50, STEM_Y)]):
+                Rectangle(9.00, 8.50)
+        extrude(amount=2.20, mode=Mode.SUBTRACT)
+
+    part = mp.part
+    part.color = srgb("#D8DEE9")
+    part.cad_material = {"roughness": 0.32, "metalness": 0.86}
+    return part
 
 
 if __name__ == "__main__":

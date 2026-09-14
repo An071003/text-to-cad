@@ -23,50 +23,80 @@ from build123d import (
     Polygon,
     extrude,
 )
-from cadgen import step
+from cadgen import srgb, step
+
+
+from lib.datums import (
+    BALANCE_PIVOT,
+    CENTER_PIVOT,
+    ESCAPE_PIVOT,
+    FOURTH_PIVOT,
+    PALLET_PIVOT,
+    THIRD_PIVOT,
+)
+
+
+def make_olive_jewel(outer_r: float = 0.55, inner_r: float = 0.18, height: float = 0.30):
+    """Synthetic ruby olive hole jewel ring."""
+    with BuildPart() as oj:
+        with BuildSketch():
+            Circle(radius=outer_r)
+            Circle(radius=inner_r, mode=Mode.SUBTRACT)
+        extrude(amount=height)
+        with BuildSketch(oj.faces().sort_by().last):
+            Circle(radius=outer_r * 0.70)
+        extrude(amount=-0.08, mode=Mode.SUBTRACT)
+    return oj.part
 
 
 @step(out="../../STEP/jewels.step")
 def jewels():
-    # 1. Olive Hole Jewel (ruby ring with olive oil sink)
-    with BuildPart() as hj:
-        with BuildSketch():
-            Circle(radius=0.60)  # Outer Ø 1.20 mm
-            Circle(radius=0.15, mode=Mode.SUBTRACT)  # Pivot hole Ø 0.30 mm
-        extrude(amount=0.35)
+    all_jewels = []
 
-        with BuildSketch(hj.faces().sort_by().last):
-            Circle(radius=0.42)
-        extrude(amount=-0.12, mode=Mode.SUBTRACT)
+    # 1. Upper train bridge ruby jewels (seated at Z = 1.30)
+    for p in [CENTER_PIVOT, THIRD_PIVOT, FOURTH_PIVOT, ESCAPE_PIVOT]:
+        j = make_olive_jewel(0.55, 0.18, 0.28).moved(Location((p[0], p[1], 1.32)))
+        all_jewels.append(j)
 
-    # 2. Endstone Jewel (flat cap ruby Ø 1.40 x 0.25 mm)
-    endstone = Cylinder(radius=0.70, height=0.25).moved(Location((2.20, 0, 0)))
+    # 2. Pallet cock jewel (seated at Z = 0.50)
+    j_pallet = make_olive_jewel(0.45, 0.12, 0.25).moved(Location((PALLET_PIVOT[0], PALLET_PIVOT[1], 0.52)))
+    all_jewels.append(j_pallet)
 
-    # 3. Incabloc Shock Spring (Lyre-shaped spring clip)
+    # 3. Balance upper shock jewel & Incabloc spring
+    j_bal = Cylinder(radius=0.65, height=0.25).moved(Location((BALANCE_PIVOT[0], BALANCE_PIVOT[1], 1.75)))
+    all_jewels.append(j_bal)
+
+    # Incabloc Lyre spring on balance cock
     with BuildPart() as sp:
         with BuildSketch():
             lyre_pts = [
-                (0.0, -0.65),
-                (0.75, -0.60),
-                (0.95, -0.10),
-                (0.60, 0.45),
-                (0.80, 0.85),
-                (0.40, 0.95),
-                (0.20, 0.60),
-                (0.0, 0.70),
-                (-0.20, 0.60),
-                (-0.40, 0.95),
-                (-0.80, 0.85),
-                (-0.60, 0.45),
-                (-0.95, -0.10),
-                (-0.75, -0.60),
+                (0.0, -0.55),
+                (0.60, -0.50),
+                (0.75, -0.10),
+                (0.50, 0.35),
+                (0.65, 0.70),
+                (0.30, 0.78),
+                (0.15, 0.50),
+                (0.0, 0.58),
+                (-0.15, 0.50),
+                (-0.30, 0.78),
+                (-0.65, 0.70),
+                (-0.50, 0.35),
+                (-0.75, -0.10),
+                (-0.60, -0.50),
             ]
             Polygon(lyre_pts)
-        extrude(amount=0.10)
+        extrude(amount=0.08)
+    spring_part = sp.part.moved(Location((BALANCE_PIVOT[0], BALANCE_PIVOT[1], 1.90)))
+    all_jewels.append(spring_part)
 
-    spring_part = sp.part.moved(Location((-2.20, 0, 0)))
+    combined = all_jewels[0]
+    for j in all_jewels[1:]:
+        combined = combined + j
 
-    return hj.part + endstone + spring_part
+    combined.color = srgb("#C01C46")  # Synthetic pigeon-blood ruby
+    combined.cad_material = {"roughness": 0.10, "opacity": 0.75, "clearcoat": 1.0}
+    return combined
 
 
 if __name__ == "__main__":

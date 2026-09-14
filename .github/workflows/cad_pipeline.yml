@@ -24,7 +24,15 @@ jobs:
       - name: Install System Dependencies for OpenCASCADE
         run: |
           sudo apt-get update
-          sudo apt-get install -y libgl1-mesa-glx libegl1-mesa libxrender1 libxcursor1 libxft2 libxinerama1
+          sudo apt-get install -y \
+            libgl1 \
+            libegl1 \
+            libegl-mesa0 \
+            libgl1-mesa-dri \
+            libxrender1 \
+            libxcursor1 \
+            libxft2 \
+            libxinerama1
 
       - name: Install CAD Runtime & Test Dependencies
         run: |

@@ -53,6 +53,7 @@ def pallet_jewels():
         exit_stone = pj.part.moved(Location((1.75, 0.20, 0.0)))
 
         pj.part = entry_stone + exit_stone
+        pj.part = pj.part.moved(Location((0, 0, 0.75)))
 
     return pj.part
 

@@ -29,29 +29,29 @@ def third_wheel():
     pinion_module = 0.15
 
     with BuildPart() as tw:
-        # Toothed Third Wheel disc
+        # Toothed Third Wheel disc (elevated above center wheel disc)
         wh = make_watch_wheel(
             teeth=wheel_teeth,
             module=wheel_module,
-            rim_thickness=0.20,
+            rim_thickness=0.18,
             hub_diameter=1.60,
             arbor_hole=0.60,
             spoke_count=4,
             spoke_width=0.35,
         )
-        # Position wheel at Z = 0.80
-        tw.part = wh.moved(Location((0, 0, 0.80)))
+        # Position wheel disc at Z = 0.85
+        tw.part = wh.moved(Location((0, 0, 0.85)))
 
-        # Pinion (10 leaves) on arbor
+        # Pinion (10 leaves) meshing with Center Wheel disc at Z = 0.58
         pin = make_pinion(
             leaves=pinion_leaves,
             module=pinion_module,
-            length=1.20,
+            length=0.40,
             arbor_diameter=0.60,
             pivot_diameter=0.20,
             pivot_length=0.40,
         )
-        tw.part = tw.part + pin.moved(Location((0, 0, 0.10)))
+        tw.part = tw.part + pin.moved(Location((0, 0, 0.55)))
 
     return tw.part
 

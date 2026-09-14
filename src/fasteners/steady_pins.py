@@ -16,17 +16,22 @@ from build123d import BuildPart, Cylinder, Location
 from cadgen import step
 
 
+from lib.datums import BARREL_BRIDGE_PINS, TRAIN_BRIDGE_PINS
+
+
 @step(out="../../STEP/steady_pins.step")
 def steady_pins():
-    with BuildPart() as sp:
-        # Ø 0.8 mm pin
-        pin_08 = Cylinder(radius=0.40, height=2.20)
-        # Ø 0.6 mm pin
-        pin_06 = Cylinder(radius=0.30, height=1.40).moved(Location((1.80, 0, 0)))
+    all_pins = []
+    # Ø 0.70 mm dowel pins (fits clearance hole Ø 0.90 mm)
+    for p in BARREL_BRIDGE_PINS + TRAIN_BRIDGE_PINS:
+        pin = Cylinder(radius=0.35, height=1.60).moved(Location((p[0], p[1], 0.50)))
+        all_pins.append(pin)
 
-        sp.part = pin_08 + pin_06
+    combined = all_pins[0]
+    for p in all_pins[1:]:
+        combined = combined + p
 
-    return sp.part
+    return combined
 
 
 if __name__ == "__main__":

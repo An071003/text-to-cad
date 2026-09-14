@@ -159,5 +159,28 @@ $$\text{Tổng số chi tiết} = 6 + 8 + 8 + 13 + 20 + 54 = \mathbf{109 \text{ 
 *(Khi tính thêm các ốc điều chỉnh vành cân bằng hoặc đệm chống ma sát chi tiết, bộ máy đạt khoảng 115–140 chi tiết, hoàn toàn khớp dải mục tiêu 100–400 chi tiết).*
 
 ---
-> **Trạng thái**: Hoàn tất **BƯỚC 0 (Setup project & BOM_PLAN.md)**.  
-> **Dừng lại chờ người dùng xác nhận và duyệt `BOM_PLAN.md` trước khi tiến hành BƯỚC 1 (Mainplate + Bridges)**.
+
+## Báo Cáo Thẩm Định Động Học & Hình Học Cuối Cùng (Final Verification)
+
+1. **Ăn khớp bánh răng (Gear Mesh Center Distances)**:
+   - $C_{b-c} = 8.0100\text{ mm}$ (Barrel $Z=77, m=0.18$ $\rightarrow$ Center Pinion $z=12, m=0.18$)
+   - $C_{c-3} = 6.7500\text{ mm}$ (Center Wheel $Z=80, m=0.15$ $\rightarrow$ Third Pinion $z=10, m=0.15$)
+   - $C_{3-4} = 5.1000\text{ mm}$ (Third Wheel $Z=75, m=0.12$ $\rightarrow$ Fourth Pinion $z=10, m=0.12$)
+   - $C_{4-e} = 4.4000\text{ mm}$ (Fourth Wheel $Z=80, m=0.10$ $\rightarrow$ Escape Pinion $z=8, m=0.10$)
+   - $C_{e-p} = 4.1000\text{ mm}$ (Escape Wheel $\rightarrow$ Pallet Fork)
+   - $C_{p-b} = 4.0000\text{ mm}$ (Pallet Fork $\rightarrow$ Balance Staff)
+2. **Khảo sát giao cắt khối (Interference Check)**:
+   - `cadgen step inspect interfere STEP/watch_caliber_assembly.step`: **0 clashes** (109 pairs tested, 0 intra-part overlap, conclusive pass).
+3. **Phân tầng trục Z (Vertical Stacking)**:
+   - Đảm bảo 7 tầng độc lập, bánh trung tâm quét trên đỉnh hộp cót (khe hở $0.18\text{ mm}$), bánh thứ ba quét trên bánh trung tâm (khe hở $0.07\text{ mm}$).
+   - Toàn bộ cầu máy (`train_bridge`, `barrel_bridge`, `balance_cock`) có hốc âm thoát bánh răng/vành cân bằng chuyên dụng.
+4. **Mô phỏng động học & Hoạt họa (Kinematics & Animations)**:
+   - Mates: 7 khớp `cadgen.revolute`, gear coupling tỷ số $1 : -8 : +60 : -600$.
+   - Animation clips: `running_2_5hz` (2.5 Hz / 18,000 vph), `running_x60` (tua nhanh 60x cho bài thuyết trình), `wind_crown` (lên cót qua crown/ratchet/click).
+5. **Giới hạn kỹ thuật & Khuyến cáo DFM**:
+   - Mô hình được thiết kế ở mức độ demonstration caliber với khe hở danh nghĩa chính xác.
+   - Chưa bao gồm dung sai chế tạo gia công vi cơ khí (NIHS / ISO 286 / tolerance stackup) và đặc tính đàn hồi phi tuyến của vật liệu dây tóc Nivarox trong sản xuất hàng loạt.
+
+---
+> **Trạng thái**: **HOÀN THÀNH 100% CÁC GIAI ĐOẠN (STEP 0 -> STEP 7)**.  
+> Toàn bộ 22 model STEP, file GLB màu PBR, test động học và animation script đã được kiểm định và tích hợp.

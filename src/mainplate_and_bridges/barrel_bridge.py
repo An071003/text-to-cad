@@ -19,13 +19,13 @@ from build123d import (
     Location,
     Locations,
     Mode,
+    Plane,
     PolarLocations,
     Polygon,
     Rectangle,
     extrude,
-    fillet,
 )
-from cadgen import step
+from cadgen import srgb, step
 
 from lib.datums import (
     BARREL_BRIDGE_PINS,
@@ -44,7 +44,6 @@ def barrel_bridge():
     with BuildPart() as bb:
         # Base contoured shape of the barrel bridge covering quadrant 3 & 4
         with BuildSketch():
-            # Approximate the perimeter enclosing the barrel, screws, and pins
             contour_pts = [
                 (-17.50, -3.00),
                 (-17.50, -11.50),
@@ -58,54 +57,54 @@ def barrel_bridge():
             Polygon(contour_pts)
         extrude(amount=bridge_thickness)
 
-        top_face = bb.faces().sort_by().last
-
-        # Recess for Ratchet Wheel on top face
-        with BuildSketch(top_face):
+        # Underside barrel clearance pocket (depth 0.90 mm from Z=0)
+        with BuildSketch(Plane.XY):
             with Locations([BARREL_PIVOT]):
-                Circle(radius=8.50)
-        extrude(amount=-0.60, mode=Mode.SUBTRACT)
+                Circle(radius=7.80)
+        extrude(amount=0.90, mode=Mode.SUBTRACT)
 
-        # Recess for Crown Wheel
-        crown_center = (3.50, -6.00)
-        with BuildSketch(top_face):
-            with Locations([crown_center]):
-                Circle(radius=5.20)
-        extrude(amount=-0.60, mode=Mode.SUBTRACT)
+        top_plane = Plane.XY.offset(bridge_thickness)
 
-        # Barrel Arbor upper pivot hole (through hole)
-        with BuildSketch(top_face):
+        # Barrel arbor upper pivot bushing hole (Ø 2.50 mm)
+        with BuildSketch(top_plane):
             with Locations([BARREL_PIVOT]):
-                Circle(radius=1.00)
+                Circle(radius=1.25)
         extrude(amount=-bridge_thickness, mode=Mode.SUBTRACT)
 
-        # Crown Wheel center post / hole
-        with BuildSketch(top_face):
-            with Locations([crown_center]):
-                Circle(radius=1.20)
-        extrude(amount=-bridge_thickness, mode=Mode.SUBTRACT)
+        # Crown wheel screw recess (X = 4.50, Y = -6.50)
+        with BuildSketch(top_plane):
+            with Locations([(4.50, -6.50)]):
+                Circle(radius=3.50)
+        extrude(amount=-0.60, mode=Mode.SUBTRACT)
 
-        # Screw counterbore holes (M1.2 screws)
+        # Ratchet wheel core recess around barrel arbor
+        with BuildSketch(top_plane):
+            with Locations([BARREL_PIVOT]):
+                Circle(radius=4.20)
+        extrude(amount=-0.50, mode=Mode.SUBTRACT)
+
+        # Mounting screw holes (3 holes, M1.2 through hole Ø 1.30 mm + counterbore Ø 2.20 mm)
         for s_pos in BARREL_BRIDGE_SCREWS:
-            # Through hole Ø 1.30 mm
-            with BuildSketch(top_face):
+            with BuildSketch(top_plane):
                 with Locations([s_pos]):
                     Circle(radius=0.65)
             extrude(amount=-bridge_thickness, mode=Mode.SUBTRACT)
 
-            # Counterbore pocket Ø 2.30 mm, depth 0.60 mm
-            with BuildSketch(top_face):
+            with BuildSketch(top_plane):
                 with Locations([s_pos]):
-                    Circle(radius=1.15)
+                    Circle(radius=1.10)
             extrude(amount=-0.60, mode=Mode.SUBTRACT)
 
-        # Steady pin holes (Ø 0.80 mm blind/through)
-        with BuildSketch(top_face):
+        # Steady pin holes (2 holes, Ø 0.80 mm)
+        with BuildSketch(top_plane):
             with Locations(BARREL_BRIDGE_PINS):
                 Circle(radius=0.40)
         extrude(amount=-bridge_thickness, mode=Mode.SUBTRACT)
 
-    return bb.part
+    part = bb.part
+    part.color = srgb("#D8DEE9")
+    part.cad_material = {"roughness": 0.30, "metalness": 0.88}
+    return part
 
 
 if __name__ == "__main__":

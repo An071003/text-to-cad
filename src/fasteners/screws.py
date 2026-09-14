@@ -25,7 +25,16 @@ from build123d import (
     Rectangle,
     extrude,
 )
-from cadgen import step
+from cadgen import srgb, step
+
+
+from lib.datums import (
+    BALANCE_COCK_SCREW,
+    BARREL_BRIDGE_SCREWS,
+    BARREL_PIVOT,
+    PALLET_COCK_SCREW,
+    TRAIN_BRIDGE_SCREWS,
+)
 
 
 def make_watch_screw(thread_diameter: float, length: float, head_diameter: float, head_height: float, slot_w: float = 0.25):
@@ -53,19 +62,38 @@ def make_watch_screw(thread_diameter: float, length: float, head_diameter: float
 @step(out="../../STEP/screws.step")
 def screws():
     with BuildPart() as bp:
-        # M1.2 Bridge screw (head Ø 2.0, shank M1.2 x 2.2)
-        s_m12 = make_watch_screw(1.20, 2.20, 2.00, 0.60, 0.28)
+        all_screws = []
 
-        # M1.6 Ratchet screw (wide head Ø 3.4, shank M1.6 x 1.8)
-        s_m16 = make_watch_screw(1.60, 1.80, 3.40, 0.50, 0.35).moved(Location((3.5, 0, 0)))
+        # 1. Train bridge screws
+        for s_pos in TRAIN_BRIDGE_SCREWS:
+            s = make_watch_screw(0.95, 1.00, 1.90, 0.40, 0.25).moved(Location((s_pos[0], s_pos[1], 0.90)))
+            all_screws.append(s)
 
-        # M1.4 Crown screw (head Ø 2.6, shank M1.4 x 1.6)
-        s_m14 = make_watch_screw(1.40, 1.60, 2.60, 0.45, 0.30).moved(Location((-3.5, 0, 0)))
+        # 2. Barrel bridge screws
+        for s_pos in BARREL_BRIDGE_SCREWS:
+            s = make_watch_screw(0.95, 1.00, 1.90, 0.40, 0.25).moved(Location((s_pos[0], s_pos[1], 0.90)))
+            all_screws.append(s)
 
-        # M1.0 Setting screw (head Ø 1.6, shank M1.0 x 1.5)
-        s_m10 = make_watch_screw(1.00, 1.50, 1.60, 0.40, 0.22).moved(Location((0, 3.0, 0)))
+        # 3. Balance cock screw
+        s_bc = make_watch_screw(0.95, 1.20, 1.90, 0.40, 0.25).moved(Location((BALANCE_COCK_SCREW[0], BALANCE_COCK_SCREW[1], 1.30)))
+        all_screws.append(s_bc)
 
-        bp.part = s_m12 + s_m16 + s_m14 + s_m10
+        # 4. Pallet cock screw
+        s_pc = make_watch_screw(0.95, 0.80, 1.90, 0.35, 0.25).moved(Location((PALLET_COCK_SCREW[0], PALLET_COCK_SCREW[1], 0.20)))
+        all_screws.append(s_pc)
+
+        # 5. Ratchet and Crown wheel screws
+        s_ratchet = make_watch_screw(1.10, 1.00, 2.80, 0.40, 0.30).moved(Location((BARREL_PIVOT[0], BARREL_PIVOT[1], 1.90)))
+        s_crown = make_watch_screw(1.00, 0.80, 2.40, 0.35, 0.28).moved(Location((4.50, -6.50, 1.50)))
+        all_screws.extend([s_ratchet, s_crown])
+
+        combined = all_screws[0]
+        for sc in all_screws[1:]:
+            combined = combined + sc
+
+        bp.part = combined
+        bp.part.color = srgb("#2B4C7E")  # Classic heat-blued steel
+        bp.part.cad_material = {"roughness": 0.10, "metalness": 0.98}
 
     return bp.part
 

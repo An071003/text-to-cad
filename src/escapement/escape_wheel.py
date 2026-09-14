@@ -68,18 +68,18 @@ def escape_wheel():
                 Polygon(spoke_cut)
         extrude(amount=-thickness, mode=Mode.SUBTRACT)
 
-        # Escape Pinion (10 leaves) on arbor
+        # Escape Pinion (10 leaves) meshing with Fourth Wheel disc at Z = 0.50
         pin = make_pinion(
             leaves=10,
             module=0.10,
-            length=1.00,
+            length=0.35,
             arbor_diameter=0.45,
             pivot_diameter=0.15,
-            pivot_length=0.35,
+            pivot_length=0.40,
         )
-        # Position wheel at Z = 0.50
-        ew.part = ew.part.moved(Location((0, 0, 0.50)))
-        ew.part = ew.part + pin.moved(Location((0, 0, -0.10)))
+        # Position escape wheel club teeth at Z = 0.78 to interact with pallet jewels
+        ew.part = ew.part.moved(Location((0, 0, 0.78)))
+        ew.part = ew.part + pin.moved(Location((0, 0, 0.48)))
 
     return ew.part
 

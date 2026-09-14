@@ -31,7 +31,7 @@ def fourth_wheel():
     pinion_module = 0.12
 
     with BuildPart() as fw:
-        # Toothed Fourth Wheel disc
+        # Toothed Fourth Wheel disc (at Z = 0.50)
         wh = make_watch_wheel(
             teeth=wheel_teeth,
             module=wheel_module,
@@ -41,23 +41,23 @@ def fourth_wheel():
             spoke_count=4,
             spoke_width=0.30,
         )
-        # Position wheel at Z = 0.45
-        fw.part = wh.moved(Location((0, 0, 0.45)))
+        # Position wheel disc at Z = 0.50
+        fw.part = wh.moved(Location((0, 0, 0.50)))
 
-        # Pinion (10 leaves) on arbor
+        # Pinion (10 leaves) meshing with Third Wheel disc at Z = 0.85
         pin = make_pinion(
             leaves=pinion_leaves,
             module=pinion_module,
-            length=1.10,
+            length=0.35,
             arbor_diameter=0.50,
             pivot_diameter=0.18,
-            pivot_length=0.35,
+            pivot_length=0.40,
         )
-        fw.part = fw.part + pin.moved(Location((0, 0, -0.20)))
+        fw.part = fw.part + pin.moved(Location((0, 0, 0.82)))
 
-        # Long seconds arbor extending down through mainplate (-Z)
-        long_pivot = Cylinder(radius=0.10, height=2.80)
-        long_pivot = long_pivot.moved(Location((0, 0, -1.80)))
+        # Long seconds arbor extending down through mainplate to dial side
+        long_pivot = Cylinder(radius=0.10, height=2.40)
+        long_pivot = long_pivot.moved(Location((0, 0, -1.00)))
         fw.part = fw.part + long_pivot
 
     return fw.part

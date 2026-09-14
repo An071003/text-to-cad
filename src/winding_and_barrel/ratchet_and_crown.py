@@ -25,7 +25,7 @@ from build123d import (
     Rectangle,
     extrude,
 )
-from cadgen import step
+from cadgen import srgb, step
 
 from lib.datums import BARREL_PIVOT
 from lib.gears import make_watch_wheel
@@ -92,6 +92,8 @@ def ratchet_and_crown():
         cspring_part = rc.part.moved(Location((click_pos[0] - 1.2, click_pos[1] - 0.5, 1.40)))
 
         rc.part = rw_part + cw_part + click_part + cspring_part
+        rc.part.color = srgb("#B0B8C4")
+        rc.part.cad_material = {"roughness": 0.18, "metalness": 0.92}
 
     return rc.part
 

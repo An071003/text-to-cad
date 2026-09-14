@@ -33,8 +33,32 @@ CALIBER_TOTAL_HEIGHT = 4.50
 
 GEAR_DATA = {
     "barrel": {"teeth": 77, "module": 0.18},
-    "center": {"pinion_leaves": 12, "wheel_teeth": 80, "module": 0.15},
-    "third": {"pinion_leaves": 10, "wheel_teeth": 75, "module": 0.12},
-    "fourth": {"pinion_leaves": 10, "wheel_teeth": 80, "module": 0.10},
-    "escape": {"pinion_leaves": 8, "wheel_teeth": 15, "module": 0.08},
+    "center": {"pinion_leaves": 12, "wheel_teeth": 80, "module": 0.15, "pinion_module": 0.18},
+    "third": {"pinion_leaves": 10, "wheel_teeth": 75, "module": 0.12, "pinion_module": 0.15},
+    "fourth": {"pinion_leaves": 10, "wheel_teeth": 80, "module": 0.10, "pinion_module": 0.12},
+    "escape": {"pinion_leaves": 8, "wheel_teeth": 15, "module": 0.10, "pinion_module": 0.10},
 }
+
+# Calculated pitch radii (mm)
+PITCH_RADII = {
+    "barrel_wheel": 77 * 0.18 / 2.0,       # 6.93 mm
+    "center_pinion": 12 * 0.18 / 2.0,      # 1.08 mm
+    "center_wheel": 80 * 0.15 / 2.0,       # 6.00 mm
+    "third_pinion": 10 * 0.15 / 2.0,       # 0.75 mm
+    "third_wheel": 75 * 0.12 / 2.0,        # 4.50 mm
+    "fourth_pinion": 10 * 0.12 / 2.0,      # 0.60 mm
+    "fourth_wheel": 80 * 0.10 / 2.0,       # 4.00 mm
+    "escape_pinion": 8 * 0.10 / 2.0,       # 0.40 mm
+    "escape_wheel": 15 * 0.10 / 2.0,       # 0.75 mm (pitch cylinder reference)
+}
+
+# Mathematically exact kinematic center distances (mm)
+CENTER_DISTANCES = {
+    "barrel_center": PITCH_RADII["barrel_wheel"] + PITCH_RADII["center_pinion"],  # 8.0100 mm
+    "center_third":  PITCH_RADII["center_wheel"] + PITCH_RADII["third_pinion"],   # 6.7500 mm
+    "third_fourth":  PITCH_RADII["third_wheel"] + PITCH_RADII["fourth_pinion"],   # 5.1000 mm
+    "fourth_escape": PITCH_RADII["fourth_wheel"] + PITCH_RADII["escape_pinion"],  # 4.4000 mm
+    "escape_pallet": 4.1000,
+    "pallet_balance": 4.0000,
+}
+

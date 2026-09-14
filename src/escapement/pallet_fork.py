@@ -89,6 +89,9 @@ def pallet_fork():
         full_arbor = arbor + pivot_top + pivot_bot
         pf.part = pf.part + full_arbor
 
+        # Move to operating escapement plane at Z = 0.75
+        pf.part = pf.part.moved(Location((0, 0, 0.75)))
+
     return pf.part
 
 

@@ -1,7 +1,10 @@
 """Balance Cock (Cầu bánh xe cân bằng) Model for Caliber ETA 6497/6498.
 
 Supports upper shock jewel (Incabloc) for balance staff, regulator, and hairspring stud.
-Mating Datum: Mounts onto Mainplate at Z = 0.
+Updated to exactly enclose:
+- BALANCE_PIVOT = (-3.3364, 10.9647)
+- BALANCE_COCK_SCREW = (-0.50, 14.50)
+- BALANCE_COCK_PINS = [(-2.00, 13.80), (1.00, 14.00)]
 """
 
 import sys
@@ -17,10 +20,11 @@ from build123d import (
     Circle,
     Locations,
     Mode,
+    Plane,
     Polygon,
     extrude,
 )
-from cadgen import step
+from cadgen import srgb, step
 
 from lib.datums import (
     BALANCE_COCK_PINS,
@@ -31,7 +35,7 @@ from lib.datums import (
 
 @step(out="../../STEP/balance_cock.step")
 def balance_cock():
-    cock_height = 1.80
+    cock_height = 2.10
 
     with BuildPart() as bc:
         # Elegant cantilever arm reaching to balance pivot
@@ -41,46 +45,55 @@ def balance_cock():
                 (2.00, 17.50),
                 (-3.50, 17.50),
                 (-5.50, 14.50),
-                (-5.50, 11.00),
-                (-3.00, 10.50),
-                (-2.50, 13.00),
-                (0.50, 13.50),
+                (-5.50, 10.00),
+                (-2.00, 10.00),
+                (-2.00, 13.00),
+                (1.50, 13.50),
             ]
             Polygon(contour_pts)
         extrude(amount=cock_height)
 
-        top_face = bc.faces().sort_by().last
+        # Underside clearance pocket for balance wheel and hairspring (depth 1.60 mm from Z=0)
+        with BuildSketch(Plane.XY):
+            with Locations([BALANCE_PIVOT]):
+                Circle(radius=6.40)
+        extrude(amount=1.60, mode=Mode.SUBTRACT)
+
+        top_plane = Plane.XY.offset(cock_height)
 
         # Incabloc shock absorber setting hole (through hole Ø 1.50 mm)
-        with BuildSketch(top_face):
+        with BuildSketch(top_plane):
             with Locations([BALANCE_PIVOT]):
                 Circle(radius=0.75)
         extrude(amount=-cock_height, mode=Mode.SUBTRACT)
 
         # Shock spring recess counterbore (Ø 2.20 mm, depth 0.60 mm)
-        with BuildSketch(top_face):
+        with BuildSketch(top_plane):
             with Locations([BALANCE_PIVOT]):
                 Circle(radius=1.10)
         extrude(amount=-0.60, mode=Mode.SUBTRACT)
 
-        # Mounting screw hole (M1.2 through hole Ø 1.30 mm + counterbore Ø 2.20 mm)
-        with BuildSketch(top_face):
+        # Mounting screw hole (M1.2 through hole + counterbore)
+        with BuildSketch(top_plane):
             with Locations([BALANCE_COCK_SCREW]):
                 Circle(radius=0.65)
         extrude(amount=-cock_height, mode=Mode.SUBTRACT)
 
-        with BuildSketch(top_face):
+        with BuildSketch(top_plane):
             with Locations([BALANCE_COCK_SCREW]):
                 Circle(radius=1.10)
         extrude(amount=-0.60, mode=Mode.SUBTRACT)
 
-        # Steady pin holes (Ø 0.80 mm)
-        with BuildSketch(top_face):
+        # Steady pin holes
+        with BuildSketch(top_plane):
             with Locations(BALANCE_COCK_PINS):
                 Circle(radius=0.40)
         extrude(amount=-cock_height, mode=Mode.SUBTRACT)
 
-    return bc.part
+    part = bc.part
+    part.color = srgb("#D8DEE9")
+    part.cad_material = {"roughness": 0.30, "metalness": 0.88}
+    return part
 
 
 if __name__ == "__main__":

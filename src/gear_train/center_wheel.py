@@ -40,38 +40,38 @@ def center_wheel():
     pinion_module = 0.18
 
     with BuildPart() as cw:
-        # 1. Toothed Center Wheel disc
+        # 1. Toothed Center Wheel disc (elevated above barrel top)
         wh = make_watch_wheel(
             teeth=wheel_teeth,
             module=wheel_module,
-            rim_thickness=0.25,
+            rim_thickness=0.20,
             hub_diameter=2.00,
             arbor_hole=0.80,
             spoke_count=4,
             spoke_width=0.45,
         )
-        # Position wheel at Z = 0.40
-        cw.part = wh.moved(Location((0, 0, 0.40)))
+        # Position wheel disc at Z = 0.58
+        cw.part = wh.moved(Location((0, 0, 0.58)))
 
-        # 2. Center Pinion (12 leaves) on the arbor
+        # 2. Center Pinion (12 leaves) meshing with mainspring barrel
         pin = make_pinion(
             leaves=pinion_leaves,
             module=pinion_module,
-            length=1.40,
+            length=0.45,
             arbor_diameter=0.80,
-            pivot_diameter=0.40,
+            pivot_diameter=0.35,
             pivot_length=0.50,
         )
-        cw.part = cw.part + pin.moved(Location((0, 0, -0.70)))
+        cw.part = cw.part + pin.moved(Location((0, 0, 0.05)))
 
-        # 3. Central cannon arbor (tube for minute hand) extending to dial side
-        tube = Cylinder(radius=0.40, height=3.20)
-        tube = tube.moved(Location((0, 0, -1.20)))
+        # 3. Central cannon arbor extending to dial side and upper bridge jewel
+        tube = Cylinder(radius=0.38, height=2.80)
+        tube = tube.moved(Location((0, 0, -0.20)))
         cw.part = cw.part + tube
 
-        # Central bore through the tube
-        bore = Cylinder(radius=0.18, height=4.0)
-        bore = bore.moved(Location((0, 0, -1.50)))
+        # Central bore through the tube for seconds arbor
+        bore = Cylinder(radius=0.18, height=3.5)
+        bore = bore.moved(Location((0, 0, -0.50)))
         cw.part = cw.part - bore
 
     return cw.part
